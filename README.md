@@ -1,4 +1,4 @@
 Funk
 ====
 
-A Python tool to help you finding ressources on the Grid5000 platform
+A Python tool that help you to find ressources for multisites experiments on the Grid5000 platform.
