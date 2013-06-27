@@ -3,7 +3,8 @@ Funk
 
 A Python tool that help you to find ressources for multisites experiments on the Grid5000 platform.
 
-BASIC HELP :
+BASIC HELP : funk.py -h
+
     Usage: funk.py
 
     This tool determine when the resources you need are available on Grid5000
