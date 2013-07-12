@@ -7,7 +7,7 @@
 import logging
 
 from pprint import pprint, pformat
-
+from socket import getfqdn
 from optparse import OptionParser, OptionGroup
 from execo import logger
 from execo.log import set_style
@@ -137,6 +137,12 @@ logger.info('Resources: %s', set_style(options.resources, 'emph'))
 logger.info('Walltime: %s', set_style(options.walltime, 'emph'))
 logger.info('Mode: %s', set_style(options.mode, 'emph'))
 
+if options.plots:
+    if 'grid5000.f' in getfqdn():
+        options.plots = False
+        logger.warning('Plots are disabled on Grid5000 frontend until the migration do Wheezy')
+    
+
 resources = {}
 for element in options.resources.split(','):
     if ':' in element:
@@ -152,8 +158,11 @@ planning = Planning(resources,
                     oar_date_to_unixts(options.startdate), 
                     oar_date_to_unixts(options.enddate), options.kavlan_global)
 
+
+
 if options.plots:
     draw_gantt(planning.planning)
+
 
 planning.compute_slots(options.walltime)
 
