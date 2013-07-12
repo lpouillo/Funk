@@ -16,14 +16,6 @@ import execo_g5k.api_utils as API
 from execo_g5k.planning import *
 
 
-try:
-    from matplotlib import pylab as PLT
-    import matplotlib.dates as MD
-except ImportError:    
-    pass
-
-
-
 
 logger = logging.getLogger('execo')
 usage = "usage: %prog [-w WALLTIME] [-m MODE] [-r element1:n_nodes1,element2:n_nodes2]  "
@@ -117,7 +109,7 @@ opttime.add_option("-s", "--startdate",
                 help = "Starting date in OAR date format (%default)")
 opttime.add_option("-e", "--enddate", 
                 dest = "enddate", 
-                default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(days = 2, minutes = 1)))),    
+                default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(days = 7, minutes = 1)))),    
                 help = "End date in OAR date format (%default)")
 
 parser.add_option_group(opttime)
@@ -131,6 +123,8 @@ else:
     logger.setLevel(logging.INFO)
 
 logger.debug(pformat(options))
+
+
 
 logger.info('%s', set_style('-- Find yoUr Nodes on g5K --', 'log_header'))
 logger.info('From %s to %s', set_style(options.startdate, 'emph'), 
@@ -171,7 +165,6 @@ if options.mode == 'now':
     resources = planning.slots[0][2]
     startdate = planning.slots[0][0]
     
-    
 elif options.mode == 'max':
     max_slot = planning.find_max_slot(options.walltime, resources)
     resources = max_slot[2]
@@ -187,7 +180,6 @@ elif options.mode == 'free':
     distribute_hosts(free_slots[0], resources)
 else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
-
 
 
 
