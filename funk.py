@@ -185,7 +185,6 @@ elif options.mode == 'free':
         
     startdate = format_oar_date(free_slots[0][0])
     distribute_hosts(free_slots[0], resources)
-    pprint(resources)
 else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
 
