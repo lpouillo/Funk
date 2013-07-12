@@ -25,11 +25,8 @@ except ImportError:
 
 
 
-
-
-
 logger = logging.getLogger('execo')
-usage = "usage: %prog -w WALLTIME [-m MODE] [-r element1:n_nodes1,element2:n_nodes2]  "
+usage = "usage: %prog [-w WALLTIME] [-m MODE] [-r element1:n_nodes1,element2:n_nodes2]  "
 description = '''This tool determine when the resources you need are available on '''+\
 '''Grid'5000 platform thanks to the analysis of Gantt diagram obtained from API and '''+\
 '''can (optionally) make the oargrid reservation.
@@ -44,11 +41,18 @@ Three modes (-m):
                              
 Require execo 2.2, http://execo.gforge.inria.fr/doc/
 '''
-epilog = """Examples :                    
+epilog = """Examples :                        
+                                  
+    Finding the number of available nodes from now to now + walltime                    
+    funk.py -w 1:00:00 -m now -r grid5000                        
+                                  
+    Finding the first free slots for a resource combination               
                                                               
-    funk.py -w 2:00:00 -m free -r lille:10,lyon:10,sophia:10 
-    
-    funk.py -w 10:00:00 -m max -r lyon:0,sophia:0,grenoble:0  
+    funk.py -w 2:00:00 -m free -r lille:10,lyon:10,sophia:10                          
+                                  
+    Finding the maximum number of nodes available for the resource and with a KaVLAN                        
+                                              
+    funk.py -w 10:00:00 -m max -r lyon,sophia,edel -k  
 """
 
 parser = OptionParser(usage = usage, description = description, epilog = epilog)
@@ -94,7 +98,7 @@ optreservation.add_option("-k", "--kavlan",
                 dest = "kavlan_global", 
                 action = "store_true",
                 default = False,    
-                help="Ask for a KaVLAN global or local (%default)")
+                help="Ask for a KaVLAN global (%default)")
 optreservation.add_option("-o", "--oargridsub_options", 
                 dest = "oargridsub_opts", 
                 default = "-t deploy",    
