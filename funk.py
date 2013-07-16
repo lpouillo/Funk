@@ -109,7 +109,7 @@ opttime.add_option("-s", "--startdate",
                 help = "Starting date in OAR date format (%default)")
 opttime.add_option("-e", "--enddate", 
                 dest = "enddate", 
-                default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(days = 7, minutes = 1)))),    
+                default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(days = 3, minutes = 1)))),    
                 help = "End date in OAR date format (%default)")
 
 parser.add_option_group(opttime)
@@ -138,9 +138,9 @@ logger.info('Walltime: %s', set_style(options.walltime, 'emph'))
 logger.info('Mode: %s', set_style(options.mode, 'emph'))
 
 if options.plots:
-    if 'grid5000.f' in getfqdn():
+    if 'grid5000.fr' in getfqdn():
         options.plots = False
-        logger.warning('Plots are disabled on Grid5000 frontend until the migration do Wheezy')
+        logger.warning('Plots are disabled on Grid5000 frontend until the migration to Wheezy')
     
 
 resources = {}
@@ -152,11 +152,14 @@ for element in options.resources.split(','):
     else:
         logger.error('You must specify the number of host element:n_nodes when using free mode')
         exit()
-    resources[element_uid]=int(n_nodes)
+    resources[element_uid] = int(n_nodes)
+
 
 planning = Planning(resources, 
                     oar_date_to_unixts(options.startdate), 
-                    oar_date_to_unixts(options.enddate), options.kavlan_global)
+                    oar_date_to_unixts(options.enddate), 
+                    options.kavlan_global)
+
 
 
 
@@ -166,6 +169,7 @@ if options.plots:
 
 planning.compute_slots(options.walltime)
 
+logger.debug(planning.slots)
 
 if options.plots:
     draw_slots(planning.slots, oar_date_to_unixts(options.enddate))
@@ -186,6 +190,7 @@ elif options.mode == 'free':
         exit()
         
     startdate = format_oar_date(free_slots[0][0])
+    
     distribute_hosts(free_slots[0], resources)
 else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
