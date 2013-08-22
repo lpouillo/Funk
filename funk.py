@@ -215,8 +215,9 @@ logger.info(log)
 
 oargrid_job_id = create_reservation(startdate, resources, options.walltime, auto_reservation = options.yes, prog = prog)
 
-log = set_style('Jobs', 'log_header')
+
 if oargrid_job_id is not None:
+    log = set_style('Jobs', 'log_header')
     jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
     for job_id, site in jobs:
         log += '\n'+set_style(site, 'emph').ljust(25)+str(job_id).rjust(9)
