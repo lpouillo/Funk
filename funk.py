@@ -221,7 +221,7 @@ if oargrid_job_id is not None:
     jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
     for job_id, site in jobs:
         log += '\n'+set_style(site, 'emph').ljust(25)+str(job_id).rjust(9)
-logger.info(log)
+    logger.info(log)
 
 
 
