@@ -204,11 +204,24 @@ elif options.mode == 'free':
 else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
 
+log = set_style('Resources', 'log_header')
+for site in get_g5k_sites():
+    if site in resources.keys():
+        log += '\n'+set_style(site, 'log_header').ljust(25)+' '+str(resources[site])+'\n'
+        for cluster in get_site_clusters(site):
+            if cluster in resources.keys():
+                log += set_style(cluster, 'emph')+': '+str(resources[cluster])+'  '
+logger.info(log)
 
+oargrid_job_id = create_reservation(startdate, resources, options.walltime, auto_reservation = options.yes, prog = prog)
 
-create_reservation(startdate, resources, options.walltime, auto_reservation = options.yes, prog = prog)
+log = set_style('Jobs', 'log_header')
+if oargrid_job_id is not None:
+    jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
+    for job_id, site in jobs:
+        log += '\n'+set_style(site+': ', 'emph').ljust(25)+str(job_id).rjust(9)
+logger.info(log)
 
-        
 
 
     
