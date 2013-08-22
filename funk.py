@@ -115,6 +115,10 @@ opttime.add_option("-e", "--enddate",
 parser.add_option_group(opttime)
 (options, args) = parser.parse_args()
 
+
+
+        
+
 if options.verbose:
     logger.setLevel(logging.DEBUG)
 elif options.quiet:
@@ -123,6 +127,11 @@ else:
     logger.setLevel(logging.INFO)
 
 logger.debug(pformat(options))
+
+if len(args) == 1:
+    prog = args[0]
+else:
+    prog = None
 
 
 
@@ -136,7 +145,9 @@ if options.resources is None:
 logger.info('Resources: %s', set_style(options.resources, 'emph'))
 logger.info('Walltime: %s', set_style(options.walltime, 'emph'))
 logger.info('Mode: %s', set_style(options.mode, 'emph'))
-
+if prog is not None:
+    logger.info('Program: %s', set_style(prog, 'emph'))
+    
 if options.plots:
     if 'grid5000.fr' in getfqdn():
         options.plots = False
@@ -188,16 +199,14 @@ elif options.mode == 'free':
     if len(free_slots) ==0:
         logger.error('Unable to find a slot for your resources:\n%s', pformat(resources))
         exit()
-        
     startdate = format_oar_date(free_slots[0][0])
-    
     distribute_hosts(free_slots[0], resources)
 else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
 
 
 
-create_reservation(startdate, resources, options.walltime, auto_reservation = options.yes)
+create_reservation(startdate, resources, options.walltime, auto_reservation = options.yes, prog = prog)
 
         
 
