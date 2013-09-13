@@ -171,7 +171,7 @@ planning = Planning(resources,
                     oar_date_to_unixts(options.enddate), 
                     options.kavlan_global)
 
-
+planning.compute()
 
 
 if options.plots:
@@ -193,7 +193,6 @@ elif options.mode == 'max':
     max_slot = planning.find_max_slot(options.walltime, resources)
     resources = max_slot[2]
     startdate = format_oar_date(max_slot[0])
-    
 elif options.mode == 'free':
     free_slots = planning.find_free_slots(options.walltime, resources)
     if len(free_slots) ==0:
