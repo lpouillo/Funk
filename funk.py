@@ -18,6 +18,8 @@ from execo_g5k.planning import *
 
 
 logger = logging.getLogger('execo')
+
+
 usage = "usage: %prog [-w WALLTIME] [-m MODE] [-r element1:n_nodes1,element2:n_nodes2]  "
 description = '''This tool determine when the resources you need are available on '''+\
 '''Grid'5000 platform thanks to the analysis of Gantt diagram obtained from API and '''+\
@@ -115,7 +117,8 @@ opttime.add_option("-e", "--enddate",
 parser.add_option_group(opttime)
 (options, args) = parser.parse_args()
 
-
+logger.debug('Options\n'+'\n'.join( [ set_style(option.ljust(20),'emph')+\
+                    '= '+str(value).ljust(10) for option, value in vars(options).iteritems() if value is not None ]))
 
         
 
@@ -128,10 +131,10 @@ else:
 
 logger.debug(pformat(options))
 
-if len(args) == 1:
-    prog = args[0]
-else:
-    prog = None
+# if len(args) == 1:
+#     prog = args[0]
+# else:
+#     prog = None
 
 
 
