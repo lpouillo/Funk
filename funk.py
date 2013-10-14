@@ -87,7 +87,6 @@ optreservation.add_option("-k", "--kavlan",
                 help="Ask for a KaVLAN global (%default)")
 optreservation.add_option("-o", "--oargridsub_opts", 
                 dest = "oargridsub_opts", 
-                default = "-t deploy",    
                 help = "Extra options to pass to the oargridsub command line (%default)")
 
 parser.add_option_group(optreservation)
@@ -206,7 +205,12 @@ for site in get_g5k_sites():
                 log += set_style(cluster, 'emph')+': '+str(resources[cluster])+'  '
 logger.info(log)
 
-oargrid_job_id = create_reservation(startdate, resources, options.walltime, auto_reservation = options.yes, prog = prog)
+oargrid_job_id = create_reservation(startdate,
+                                    resources,
+                                    options.walltime,
+                                    oargridsub_opts = options.oargridsub_opts,
+                                    auto_reservation = options.yes,
+                                    prog = prog)
 
 if oargrid_job_id is None:
     exit(1)
