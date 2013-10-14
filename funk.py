@@ -68,7 +68,12 @@ optinout.add_option("-p", "--plots",
                 action = "store_true", 
                 default = False,    
                 help = "Draw plots (gantt, free, max) (%default)")
-                
+optinout.add_option("-R", "--ratio",
+                dest = "ratio",
+                type = "float",
+                default = None,
+                help = "reserve the given ratio of the resources")
+
 parser.add_option_group(optinout)
 
 optreservation = OptionGroup(parser, "Resources", "Customize your Grid'5000 topology.")
@@ -196,14 +201,30 @@ else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
     exit()
 
-log = set_style('Resources', 'log_header')
-for site in get_g5k_sites():
-    if site in resources.keys():
-        log += '\n'+set_style(site, 'log_header').ljust(20)+' '+str(resources[site])+'\n'
-        for cluster in get_site_clusters(site):
-            if cluster in resources.keys():
-                log += set_style(cluster, 'emph')+': '+str(resources[cluster])+'  '
-logger.info(log)
+def show_resources(resources):
+    total_hosts = 0
+    log = set_style('Resources', 'log_header')
+    for site in get_g5k_sites():
+        if site in resources.keys():
+            total_hosts += resources[site]
+            log += '\n'+set_style(site, 'log_header').ljust(20)+' '+str(resources[site])+'\n'
+            for cluster in get_site_clusters(site):
+                if cluster in resources.keys():
+                    log += set_style(cluster, 'emph')+': '+str(resources[cluster])+'  '
+    logger.info(log)
+    logger.info(set_style('total hosts: ', 'log_header') + str(total_hosts))
+
+show_resources(resources)
+
+if options.ratio:
+    for site in get_g5k_sites():
+        if site in resources.keys():
+            resources[site] = int(resources[site] * options.ratio)
+            for cluster in get_site_clusters(site):
+                if cluster in resources.keys():
+                    resources[cluster] = int(resources[cluster] * options.ratio)
+    logger.info("after applying ratio %f, actual resources reserved:" % (options.ratio,))
+    show_resources(resources)
 
 oargrid_job_id = create_reservation(startdate,
                                     resources,
