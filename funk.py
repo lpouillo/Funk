@@ -10,7 +10,7 @@ from socket import getfqdn
 from optparse import OptionParser, OptionGroup
 from execo import logger, Local
 from execo.time_utils import sleep
-from execo.log import set_style
+from execo.log import style
 from execo_g5k.oar import oar_date_to_unixts, format_oar_date, oar_duration_to_seconds
 import execo_g5k.api_utils as API
 from execo_g5k.planning import *
@@ -21,9 +21,9 @@ usage = "usage: %prog [-w WALLTIME] [-m MODE] [-r element1:n_nodes1,element2:n_n
 description = '''This tool determine when the resources you need are available on '''.ljust(100)+\
     '''Grid'5000 platform thanks to the analysis of Gantt diagram obtained  '''.ljust(100)+\
     '''from API and can make the oargrid reservation. It has three modes'''.ljust(100)+\
-    ''' - '''+set_style('date', 'emph')+'''  = give you the number of nodes available (default)                                                    
-  - '''+set_style('free', 'emph')+''' = find the slots for a combination of resources                                
-  - '''+set_style('max', 'emph')+'''  = find the maximum number of nodes for the period specified.'''.ljust(100)+\
+    ''' - '''+style.emph('date')+'''  = give you the number of nodes available (default)                                                    
+  - '''+style.emph('free')+''' = find the slots for a combination of resources                                
+  - '''+style.emph('max')+'''  = find the maximum number of nodes for the period specified.'''.ljust(100)+\
  '''                             
  Require execo 2.2, http://execo.gforge.inria.fr/doc/
  '''
@@ -113,7 +113,7 @@ opttime.add_option("-e", "--enddate",
 parser.add_option_group(opttime)
 (options, args) = parser.parse_args()
 
-logger.debug('Options\n'+'\n'.join( [ set_style(option.ljust(20),'emph')+\
+logger.debug('Options\n'+'\n'.join( [ style.emph(option.ljust(20))+\
                     '= '+str(value).ljust(10) for option, value in vars(options).iteritems() if value is not None ]))
 
 # The first arugment of the script is the program to launch after the oargridsub command 
@@ -126,26 +126,26 @@ elif options.quiet:
 else:
     logger.setLevel(logging.INFO)
 
-logger.debug('Options\n'+'\n'.join( [ set_style(option.ljust(20),'emph')+\
+logger.debug('Options\n'+'\n'.join( [ style.emph(option.ljust(20))+\
                     '= '+str(value).ljust(10) for option, value in vars(options).iteritems() if value is not None ]))
 
 
 
 
 
-logger.info('%s', set_style('-- Find yoUr Nodes on g5K --', 'log_header'))
-logger.info('From %s to %s', set_style(options.startdate, 'emph'), 
-            set_style(options.enddate, 'emph'))
+logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K --'))
+logger.info('From %s to %s', style.emph(options.startdate), 
+            style.emph(options.enddate))
 
 if options.resources is None:
     options.resources = 'suno:2,sol:2,griffon:10,rennes:20'
     logger.warning('No resources given, will use demo values ')
 
-logger.info('Resources: %s', set_style(options.resources, 'emph'))
-logger.info('Walltime: %s', set_style(options.walltime, 'emph'))
-logger.info('Mode: %s', set_style(options.mode, 'emph'))
+logger.info('Resources: %s', style.emph(options.resources))
+logger.info('Walltime: %s', style.emph(options.walltime))
+logger.info('Mode: %s', style.emph(options.mode))
 if prog is not None:
-    logger.info('Program: %s', set_style(prog, 'emph'))
+    logger.info('Program: %s', style.emph(prog))
     
 if options.plots:
     if 'grid5000.fr' in getfqdn():
@@ -203,16 +203,16 @@ else:
 
 def show_resources(resources):
     total_hosts = 0
-    log = set_style('Resources', 'log_header')
+    log = style.log_header('Resources')
     for site in get_g5k_sites():
         if site in resources.keys():
             total_hosts += resources[site]
-            log += '\n'+set_style(site, 'log_header').ljust(20)+' '+str(resources[site])+'\n'
+            log += '\n'+style.log_header(site).ljust(20)+' '+str(resources[site])+'\n'
             for cluster in get_site_clusters(site):
                 if cluster in resources.keys():
-                    log += set_style(cluster, 'emph')+': '+str(resources[cluster])+'  '
+                    log += style.emph(cluster)+': '+str(resources[cluster])+'  '
     logger.info(log)
-    logger.info(set_style('total hosts: ', 'log_header') + str(total_hosts))
+    logger.info(style.log_header('total hosts: ') + str(total_hosts))
 
 show_resources(resources)
 
@@ -236,10 +236,10 @@ oargrid_job_id = create_reservation(startdate,
 if oargrid_job_id is None:
     exit(1)
 else:
-    log = set_style('Jobs', 'log_header')
+    log = style.log_header('Jobs')
     jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
     for job_id, site in jobs:
-        log += '\n'+set_style(site, 'emph').ljust(25)+str(job_id).rjust(9)
+        log += '\n'+style.emph(site).ljust(25)+str(job_id).rjust(9)
     logger.info(log)
     exit(oargrid_job_id)
 
