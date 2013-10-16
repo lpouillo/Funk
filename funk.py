@@ -153,7 +153,7 @@ if options.plots:
         logger.warning('Plots are disabled on Grid5000 frontend until the migration to Wheezy')
     
 
-resources = {}
+resources_wanted = {}
 for element in options.resources.split(','):
     if ':' in element:
         element_uid, n_nodes = element.split(':')
@@ -162,10 +162,9 @@ for element in options.resources.split(','):
     else:
         logger.error('You must specify the number of host element:n_nodes when using free mode')
         exit()
-    resources[element_uid] = int(n_nodes)
+    resources_wanted[element_uid] = int(n_nodes)
 
-
-planning = Planning(resources, 
+planning = Planning(resources_wanted, 
                     oar_date_to_unixts(options.startdate), 
                     oar_date_to_unixts(options.enddate), 
                     options.kavlan_global)
@@ -187,16 +186,16 @@ if options.mode == 'date':
     startdate = planning.slots[0][0]
     
 elif options.mode == 'max':
-    max_slot = planning.find_max_slot(options.walltime, resources)
+    max_slot = planning.find_max_slot(options.walltime, resources_wanted)
     resources = max_slot[2]
     startdate = format_oar_date(max_slot[0])
 elif options.mode == 'free':
-    free_slots = planning.find_free_slots(options.walltime, resources)
+    free_slots = planning.find_free_slots(options.walltime, resources_wanted)
     if len(free_slots) ==0:
-        logger.error('Unable to find a slot for your resources:\n%s', pformat(resources))
+        logger.error('Unable to find a slot for your resources:\n%s', pformat(resources_wanted))
         exit()
     startdate = format_oar_date(free_slots[0][0])
-    distribute_hosts(free_slots[0], resources)
+    resources = distribute_hosts(free_slots[0], resources_wanted)
 else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
     exit()
@@ -219,10 +218,15 @@ show_resources(resources)
 if options.ratio:
     for site in get_g5k_sites():
         if site in resources.keys():
-            resources[site] = int(resources[site] * options.ratio)
+            tmp_total_site_nodes = 0
             for cluster in get_site_clusters(site):
                 if cluster in resources.keys():
                     resources[cluster] = int(resources[cluster] * options.ratio)
+                    tmp_total_site_nodes += resources[cluster]
+            if resources_wanted.has_key(site):
+                resources[site] = int(resources_wanted[site] * options.ratio)
+            else:
+                resources[site] = tmp_total_site_nodes
     logger.info("after applying ratio %f, actual resources reserved:" % (options.ratio,))
     show_resources(resources)
 
