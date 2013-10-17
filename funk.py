@@ -93,6 +93,9 @@ optreservation.add_option("-k", "--kavlan",
 optreservation.add_option("-o", "--oargridsub_opts", 
                 dest = "oargridsub_opts", 
                 help = "Extra options to pass to the oargridsub command line (%default)")
+optreservation.add_option("--blacklist", 
+                dest = "blacklist", 
+                help = "Blacklist some clusters")
 
 parser.add_option_group(optreservation)
 
@@ -214,6 +217,25 @@ def show_resources(resources):
     logger.info(style.log_header('total hosts: ') + str(total_hosts))
 
 show_resources(resources)
+
+if options.blacklist is not None:
+    remove_nodes = 0
+    for element in options.blacklist.split(','):
+        if element in resources:
+            if element in get_g5k_clusters():
+                remove_nodes += resources[element]
+                resources[get_cluster_site(element)] -= resources[element]
+                del resources[element]
+            if element in get_g5k_sites():
+                for cluster in get_site_clusters(element):
+                    remove_nodes += resources[cluster]
+                    del resources[cluster]
+                
+                del resources[element]
+    if 'grid5000' in resources:
+        resources['grid5000'] -= remove_nodes
+    logger.info("after removing blacklisted elements %s, actual resources reserved:" % (options.blacklist,))
+    show_resources(resources)
 
 if options.ratio:
     for site in get_g5k_sites():
