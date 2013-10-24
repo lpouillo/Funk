@@ -73,6 +73,11 @@ optinout.add_option("-R", "--ratio",
                 type = "float",
                 default = None,
                 help = "reserve the given ratio of the resources")
+optinout.add_option("-c", "--charter",
+                dest = "charter",
+                default = False,
+                action = "store_true",
+                help = "avoid charter periods")
 
 parser.add_option_group(optinout)
 
@@ -172,7 +177,7 @@ planning = Planning(resources_wanted,
                     oar_date_to_unixts(options.enddate), 
                     options.kavlan_global)
 
-planning.compute()
+planning.compute(out_of_chart = options.charter)
 
 if options.plots:
     draw_gantt(planning.planning)
