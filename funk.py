@@ -29,8 +29,8 @@ description = '''This tool determine when the resources you need are available o
  '''
 epilog = """Examples :                        
                                   
-    Finding the number of available nodes from now to now + walltime                    
-    funk.py -w 1:00:00 -m now -r grid5000                        
+    Finding the number of available nodes from date to date + walltime                    
+    funk.py -w 1:00:00 -m date -r grid5000                        
                                   
     Finding the first free slots for a resource combination               
                                                               
