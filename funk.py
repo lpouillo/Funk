@@ -220,6 +220,9 @@ def show_resources(resources):
                     log += style.emph(cluster)+': '+str(resources[cluster])+'  '
     logger.info(log)
     logger.info(style.log_header('total hosts: ') + str(total_hosts))
+    if total_hosts == 0:
+        logger.error('No nodes can be found for your parameters, exiting ...')
+        exit()
 
 show_resources(resources)
 
