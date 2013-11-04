@@ -179,12 +179,15 @@ planning = Planning(resources_wanted,
 
 planning.compute(out_of_chart = options.charter)
 
+
+
 if options.plots:
     draw_gantt(planning.planning)
 
 planning.compute_slots(options.walltime)
 
 logger.debug(planning.slots)
+
 
 if options.plots:
     draw_slots(planning.slots, oar_date_to_unixts(options.enddate))
@@ -199,11 +202,12 @@ elif options.mode == 'max':
     startdate = format_oar_date(max_slot[0])
 elif options.mode == 'free':
     free_slots = planning.find_free_slots(options.walltime, resources_wanted)
-    if len(free_slots) ==0:
+    if len(free_slots) == 0:
         logger.error('Unable to find a slot for your resources:\n%s', pformat(resources_wanted))
         exit()
     startdate = format_oar_date(free_slots[0][0])
     resources = distribute_hosts(free_slots[0], resources_wanted)
+    
 else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
     exit()
@@ -217,12 +221,11 @@ def show_resources(resources):
             log += '\n'+style.log_header(site).ljust(20)+' '+str(resources[site])+'\n'
             for cluster in get_site_clusters(site):
                 if cluster in resources.keys():
+                    total_hosts += resources[cluster]
                     log += style.emph(cluster)+': '+str(resources[cluster])+'  '
     logger.info(log)
     logger.info(style.log_header('total hosts: ') + str(total_hosts))
-    if total_hosts == 0:
-        logger.error('No nodes can be found for your parameters, exiting ...')
-        exit()
+
 
 show_resources(resources)
 
