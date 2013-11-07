@@ -179,10 +179,9 @@ planning = Planning(resources_wanted,
 
 planning.compute(out_of_chart = options.charter)
 
-
-
 if options.plots:
-    draw_gantt(planning.planning)
+	logger.warning('Plots are disabled')
+    #draw_gantt(planning.planning)
 
 planning.compute_slots(options.walltime)
 
@@ -190,7 +189,8 @@ logger.debug(planning.slots)
 
 
 if options.plots:
-    draw_slots(planning.slots, oar_date_to_unixts(options.enddate))
+    logger.warning('Plots are disabled')
+    #draw_slots(planning.slots, oar_date_to_unixts(options.enddate))
 
 if options.mode == 'date':
     resources = planning.slots[0][2]
@@ -212,6 +212,8 @@ else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
     exit()
 
+logger.debug('Resources:\n'+pformat(resources))
+
 def show_resources(resources):
     total_hosts = 0
     log = style.log_header('Resources')
@@ -221,7 +223,7 @@ def show_resources(resources):
             log += '\n'+style.log_header(site).ljust(20)+' '+str(resources[site])+'\n'
             for cluster in get_site_clusters(site):
                 if cluster in resources.keys():
-                    total_hosts += resources[cluster]
+#                    total_hosts += resources[cluster]
                     log += style.emph(cluster)+': '+str(resources[cluster])+'  '
     logger.info(log)
     logger.info(style.log_header('total hosts: ') + str(total_hosts))
