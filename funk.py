@@ -90,7 +90,6 @@ optreservation.add_option("-r", "--resources",
                 dest="resources", 
                 default = "grid5000",
                 help = "comma separated list of 'element1:n_nodes1,element2:n_nodes2', element can be a cluster, site or grid5000")
-
 optreservation.add_option("-k", "--kavlan", 
                 dest = "kavlan_global", 
                 action = "store_true",
@@ -157,7 +156,10 @@ if options.plots:
     if 'grid5000.fr' in getfqdn():
         options.plots = False
         logger.warning('Plots are disabled on Grid5000 frontend until the migration to Wheezy')
-    
+if options.blacklist is not None:
+    blacklisted = options.blacklist.split(',')
+else:
+    blacklisted = []
 
 resources_wanted = {}
 for element in options.resources.split(','):
@@ -168,7 +170,8 @@ for element in options.resources.split(','):
     else:
         logger.error('You must specify the number of host element:n_nodes when using free mode')
         exit()
-    if element_uid not in options.blacklist.split(','):
+    
+    if element_uid not in blacklisted:
         resources_wanted[element_uid] = int(n_nodes)
 
 planning = Planning(resources_wanted, 
