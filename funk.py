@@ -176,10 +176,9 @@ planning = Planning(resources_wanted,
 
 planning.compute(out_of_chart = options.charter)
 
-
-
 if options.plots:
-    draw_gantt(planning.planning)
+	logger.warning('Plots are disabled')
+    #draw_gantt(planning.planning)
 
 planning.compute_slots(options.walltime)
 
@@ -187,7 +186,8 @@ logger.debug(planning.slots)
 
 
 if options.plots:
-    draw_slots(planning.slots, oar_date_to_unixts(options.enddate))
+    logger.warning('Plots are disabled')
+    #draw_slots(planning.slots, oar_date_to_unixts(options.enddate))
 
 if options.mode == 'date':
     resources = planning.slots[0][2]
@@ -210,6 +210,8 @@ elif options.mode == 'free':
 else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
     exit()
+
+logger.debug('Resources:\n'+pformat(resources))
 
 def show_resources(resources):
     total_hosts = 0
