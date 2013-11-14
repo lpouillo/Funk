@@ -68,6 +68,10 @@ optinout.add_option("-p", "--plots",
                 action = "store_true", 
                 default = False,    
                 help = "Draw plots (gantt, free, max) (%default)")
+optinout.add_option("-n", "--name", 
+                dest = "name", 
+                default = "Powered by FUNK",    
+                help="Ask for a vlan (%default)")
 optinout.add_option("-R", "--ratio",
                 dest = "ratio",
                 type = "float",
@@ -86,10 +90,7 @@ optreservation.add_option("-r", "--resources",
                 dest="resources", 
                 default = "grid5000",
                 help = "comma separated list of 'element1:n_nodes1,element2:n_nodes2', element can be a cluster, site or grid5000")
-#optreservation.add_option("-n", "--subnet", 
-#                dest = "subnet", 
-#                default = None,    
-#                help="Ask for a vlan (%default)")
+
 optreservation.add_option("-k", "--kavlan", 
                 dest = "kavlan_global", 
                 action = "store_true",
@@ -276,7 +277,8 @@ oargrid_job_id = create_reservation(startdate,
                                     options.walltime,
                                     oargridsub_opts = options.oargridsub_opts,
                                     auto_reservation = options.yes,
-                                    prog = prog)
+                                    prog = prog,
+                                    name = options.name)
 
 if oargrid_job_id is None:
     exit(1)
