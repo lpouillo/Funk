@@ -190,8 +190,15 @@ if options.plots:
     draw_slots(planning.slots, oar_date_to_unixts(options.enddate))
 
 if options.mode == 'date':
+    # In date mode, funk take the first slot available for the wanted walltime
     resources = planning.slots[0][2]
+    if resources['grid5000'] == 0:
+        logger.error('No nodes on %s available at %s for %s',
+                    ''.join( [ element for element in resources_wanted.iterkeys()]),
+                     options.startdate, options.walltime)
+        exit()       
     startdate = planning.slots[0][0]
+    
     if not options.ratio:
         options.ratio = 0.9
     
@@ -199,6 +206,7 @@ elif options.mode == 'max':
     max_slot = planning.find_max_slot(options.walltime, resources_wanted)
     resources = max_slot[2]
     startdate = format_oar_date(max_slot[0])
+    
 elif options.mode == 'free':
     free_slots = planning.find_free_slots(options.walltime, resources_wanted)
     if len(free_slots) == 0:
