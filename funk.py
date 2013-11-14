@@ -143,7 +143,7 @@ logger.debug('Options\n'+'\n'.join( [ style.emph(option.ljust(20))+\
 log_endate = options.enddate if options.mode is not 'date' else format_oar_date( oar_date_to_unixts(options.startdate) + oar_duration_to_seconds(options.walltime))
 logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K --'))
 logger.info('From %s to %s', style.emph(options.startdate), 
-            style.emph(options.enddate))
+            style.emph(log_endate))
 
 
 logger.info('Resources: %s', style.emph(options.resources))
@@ -176,9 +176,10 @@ planning = Planning(resources_wanted,
 
 planning.compute(out_of_chart = options.charter)
 
+
+
 if options.plots:
-	logger.warning('Plots are disabled')
-    #draw_gantt(planning.planning)
+    draw_gantt(planning.planning)
 
 planning.compute_slots(options.walltime)
 
@@ -186,8 +187,7 @@ logger.debug(planning.slots)
 
 
 if options.plots:
-    logger.warning('Plots are disabled')
-    #draw_slots(planning.slots, oar_date_to_unixts(options.enddate))
+    draw_slots(planning.slots, oar_date_to_unixts(options.enddate))
 
 if options.mode == 'date':
     resources = planning.slots[0][2]
@@ -210,8 +210,6 @@ elif options.mode == 'free':
 else:
     logger.error('Mode '+options.mode+' is not supported, funk -h for help')
     exit()
-
-logger.debug('Resources:\n'+pformat(resources))
 
 def show_resources(resources):
     total_hosts = 0
