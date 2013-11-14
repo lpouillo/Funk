@@ -140,14 +140,11 @@ logger.debug('Options\n'+'\n'.join( [ style.emph(option.ljust(20))+\
 
 
 
-
+log_endate = options.enddate if options.mode is not 'date' else format_oar_date( oar_date_to_unixts(options.startdate) + oar_duration_to_seconds(options.walltime))
 logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K --'))
 logger.info('From %s to %s', style.emph(options.startdate), 
             style.emph(options.enddate))
 
-if options.resources is None:
-    options.resources = 'suno:2,sol:2,griffon:10,rennes:20'
-    logger.warning('No resources given, will use demo values ')
 
 logger.info('Resources: %s', style.emph(options.resources))
 logger.info('Walltime: %s', style.emph(options.walltime))
@@ -195,6 +192,8 @@ if options.plots:
 if options.mode == 'date':
     resources = planning.slots[0][2]
     startdate = planning.slots[0][0]
+    if not options.ratio:
+        options.ratio = 0.9
     
 elif options.mode == 'max':
     max_slot = planning.find_max_slot(options.walltime, resources_wanted)
@@ -221,7 +220,7 @@ def show_resources(resources):
             log += '\n'+style.log_header(site).ljust(20)+' '+str(resources[site])+'\n'
             for cluster in get_site_clusters(site):
                 if cluster in resources.keys():
-                    total_hosts += resources[cluster]
+#                    total_hosts += resources[cluster]
                     log += style.emph(cluster)+': '+str(resources[cluster])+'  '
     logger.info(log)
     logger.info(style.log_header('total hosts: ') + str(total_hosts))
