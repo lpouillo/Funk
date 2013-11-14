@@ -167,7 +167,8 @@ for element in options.resources.split(','):
     else:
         logger.error('You must specify the number of host element:n_nodes when using free mode')
         exit()
-    resources_wanted[element_uid] = int(n_nodes)
+    if element_uid not in options.blacklist.split(','):
+        resources_wanted[element_uid] = int(n_nodes)
 
 planning = Planning(resources_wanted, 
                     oar_date_to_unixts(options.startdate), 
