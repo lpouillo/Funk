@@ -190,7 +190,7 @@ else:
     logger.error('Mode '+args.mode+' is not supported, funk -h for help')
     exit()
 
-def show_resources(resources):
+def show_resources(resources, mode):
     total_hosts = 0
     log = style.log_header('Resources')
     for site in get_g5k_sites():
@@ -199,12 +199,13 @@ def show_resources(resources):
             log += '\n'+style.log_header(site).ljust(20)+' '+str(resources[site])+'\n'
             for cluster in get_site_clusters(site):
                 if cluster in resources.keys():
-#                    total_hosts += resources[cluster]
-                    log += style.emph(cluster)+': '+str(resources[cluster])+'  '
+                    if mode == 'free':
+                        total_hosts += resources[cluster]
+                        log += style.emph(cluster)+': '+str(resources[cluster])+'  '
     logger.info(log)
     logger.info(style.log_header('total hosts: ') + str(total_hosts))
 
-show_resources(resources)
+show_resources(resources, args.mode)
 
 if args.blacklist is not None:
     remove_nodes = 0
@@ -223,7 +224,7 @@ if args.blacklist is not None:
     if 'grid5000' in resources:
         resources['grid5000'] -= remove_nodes
     logger.info("after removing blacklisted elements %s, actual resources reserved:" % (args.blacklist,))
-    show_resources(resources)
+    show_resources(resources, args.mode)
 
 if args.ratio:
     for site in get_g5k_sites():
@@ -238,7 +239,7 @@ if args.ratio:
             else:
                 resources[site] = tmp_total_site_nodes
     logger.info("after applying ratio %f, actual resources reserved:" % (args.ratio,))
-    show_resources(resources)
+    show_resources(resources, args.mode)
 
 oargrid_job_id = create_reservation(startdate,
                                     resources,
