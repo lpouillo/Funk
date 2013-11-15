@@ -10,6 +10,7 @@ from execo import logger
 from execo.log import style
 from execo_g5k.planning import *
 
+# Defining and anlyzing program options 
 prog = 'funk'
 description = 'This tool helps you to find resources on '+\
     style.log_header("Grid'5000")+' platform. It has three modes: \n - '+\
@@ -117,6 +118,7 @@ elif args.quiet:
 else:
     logger.setLevel('INFO')
 
+# Printing welcome message
 logger.debug('Options\n'+'\n'.join( [ style.emph(option.ljust(20))+\
                     '= '+str(value).ljust(10) for option, value in vars(args).iteritems() if value is not None ]))
 log_endate = args.enddate if args.mode is not 'date' else format_oar_date( oar_date_to_unixts(args.startdate) + oar_duration_to_seconds(args.walltime))
@@ -128,6 +130,7 @@ logger.info('Walltime: %s', style.emph(args.walltime))
 logger.info('Mode: %s', style.emph(args.mode))
 if args.prog is not None:
     logger.info('Program: %s', style.emph(args.prog))
+    
 # Creating resources dict from command line options
 if args.blacklist is not None:
     blacklisted = args.blacklist.split(',')
@@ -147,6 +150,7 @@ for element in args.resources.split(','):
     if element_uid not in blacklisted:
         resources_wanted[element_uid] = int(n_nodes)
 
+# Computing the planning of the ressources wanted
 planning = Planning(resources_wanted, 
                     oar_date_to_unixts(args.startdate), 
                     oar_date_to_unixts(args.enddate), 
@@ -155,6 +159,7 @@ planning.compute(out_of_chart = args.charter)
 planning.compute_slots(args.walltime)
 logger.debug(planning.slots)
 
+# Determine the slot to use
 if args.mode == 'date':
     # In date mode, funk take the first slot available for the wanted walltime
     resources = planning.slots[0][2]
@@ -165,13 +170,14 @@ if args.mode == 'date':
         exit()       
     startdate = planning.slots[0][0]
     
-    
 elif args.mode == 'max':
+    # In max mode, funk take the slot available with the maximum number of resources 
     max_slot = planning.find_max_slot(args.walltime, resources_wanted)
     resources = max_slot[2]
     startdate = format_oar_date(max_slot[0])
     
 elif args.mode == 'free':
+    # In free mode, funk take the first slot that match your resources 
     free_slots = planning.find_free_slots(args.walltime, resources_wanted)
     if len(free_slots) == 0:
         logger.error('Unable to find a slot for your resources:\n%s', pformat(resources_wanted))
@@ -180,6 +186,7 @@ elif args.mode == 'free':
     resources = distribute_hosts(free_slots[0], resources_wanted)
     
 else:
+    # No other modes supported
     logger.error('Mode '+args.mode+' is not supported, funk -h for help')
     exit()
 
@@ -196,7 +203,6 @@ def show_resources(resources):
                     log += style.emph(cluster)+': '+str(resources[cluster])+'  '
     logger.info(log)
     logger.info(style.log_header('total hosts: ') + str(total_hosts))
-
 
 show_resources(resources)
 
