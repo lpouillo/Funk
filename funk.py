@@ -223,7 +223,7 @@ if args.blacklist is not None:
                 del resources[element]
     if 'grid5000' in resources:
         resources['grid5000'] -= remove_nodes
-    logger.info("after removing blacklisted elements %s, actual resources reserved:" % (args.blacklist,))
+    logger.info("After removing blacklisted elements %s, actual resources reserved:" % (args.blacklist,))
     show_resources(resources, args.mode)
 
 if args.ratio:
@@ -238,7 +238,7 @@ if args.ratio:
                 resources[site] = int(resources_wanted[site] * args.ratio)
             else:
                 resources[site] = tmp_total_site_nodes
-    logger.info("after applying ratio %f, actual resources reserved:" % (args.ratio,))
+    logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
     show_resources(resources, args.mode)
 
 oargrid_job_id = create_reservation(startdate,
