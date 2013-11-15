@@ -190,6 +190,7 @@ else:
     logger.error('Mode '+args.mode+' is not supported, funk -h for help')
     exit()
 
+# Showing the resources available
 def show_resources(resources, mode):
     total_hosts = 0
     log = style.log_header('Resources')
@@ -241,6 +242,7 @@ if args.ratio:
     logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
     show_resources(resources, args.mode)
 
+# Creating the reservation
 oargrid_job_id = create_reservation(startdate,
                                     resources,
                                     args.walltime,
