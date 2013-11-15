@@ -8,11 +8,7 @@ from argparse import ArgumentParser, RawTextHelpFormatter
 from pprint import pprint, pformat
 from execo import logger
 from execo.log import style
-from execo_g5k.oar import oar_date_to_unixts, format_oar_date, oar_duration_to_seconds
-import execo_g5k.api_utils as API
 from execo_g5k.planning import *
-
-
 
 prog = 'funk'
 description = 'This tool helps you to find resources on '+\
@@ -137,6 +133,7 @@ if args.blacklist is not None:
     blacklisted = args.blacklist.split(',')
 else:
     blacklisted = []
+    
 resources_wanted = {}
 for element in args.resources.split(','):
     if ':' in element:
@@ -168,8 +165,6 @@ if args.mode == 'date':
         exit()       
     startdate = planning.slots[0][0]
     
-    if not args.ratio:
-        args.ratio = 0.9
     
 elif args.mode == 'max':
     max_slot = planning.find_max_slot(args.walltime, resources_wanted)
