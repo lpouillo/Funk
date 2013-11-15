@@ -1,64 +1,65 @@
 Funk
 ====
-
-    A Python tool that help you to find ressources for multisites experiments on the Grid5000 platform.
-    Usage: funk [-w WALLTIME] [-m MODE] [-r element1:n_nodes1,element2:n_nodes2]  
+A Python tool that help you to find ressources for multisites experiments on the Grid5000 platform.
     
-    This tool determine when the resources you need are available on
-    Grid'5000 platform thanks to the analysis of Gantt diagram obtained
-    from API and can make the oargrid reservation. It has three modes
-    - date  = give you the number of nodes available (default)
-    - free = find the slots for a combination of resources
-    - max  = find the maximum number of nodes for the period specified.
-    Require execo 2.2, http://execo.gforge.inria.fr/doc/
-
-    Options:
+    usage: funk [-h] [-m MODE] [-y] [-q | -v] [-p PROG] [-r RESOURCES]
+                [-b BLACKLIST] [-R RATIO] [-o OARGRIDSUB_OPTS] [-k] [-j JOB_NAME]
+                [-w WALLTIME] [-s STARTDATE] [-e ENDDATE] [-c]
+    
+    This tool helps you to find resources on Grid'5000 platform. It has three modes: 
+     - date = give you the number of nodes available at a given date, 
+     - free = find the next free slot for a combination of resources, 
+     - max  = find the maximum number of nodes for the period specified.
+    
+    If no arguments is given, compile the planning of the whole platform and generate an oargridsub command line with all available resources for 1 hour. 
+    Based execo 2.5, http://execo.gforge.inria.fr/doc/ and the Grid'5000 Job API, https://api.grid5000.fr.
+    
+    General options:
+      Define mode and controls I/O.
+    
       -h, --help            show this help message and exit
+      -m MODE, --mode MODE  Setup the mode: date, free or max
+      -y, --yes             Perform the reservation automatically
+      -q, --quiet           Run without printing anything
+      -v, --verbose         Run in verbose mode
+      -p PROG, --prog PROG  The program to be run when the reservation start
     
-      General options:
-        Define mode and controls I/O.
+    Reservation:
+      Customize your Grid'5000 reservation.
     
-        -m MODE, --mode=MODE
-                            Setup the mode: date, free or max (date)
-        -y, --yes           Perform the reservation automatically (False)
-        -q, --quiet         Run without printing anything (False)
-        -v, --verbose       Run in verbose mode (False)
-        -p, --plots         Draw plots (gantt, free, max) (False)
-        -R RATIO, --ratio=RATIO
-                            reserve the given ratio of the resources
-        -c, --charter       avoid charter periods
-    
-      Resources:
-        Customize your Grid'5000 topology.
-    
-        -r RESOURCES, --resources=RESOURCES
-                            comma separated list of
-                            'element1:n_nodes1,element2:n_nodes2', element can be
-                            a cluster, site or grid5000
-        -k, --kavlan        Ask for a KaVLAN global (False)
-        -o OARGRIDSUB_OPTS, --oargridsub_opts=OARGRIDSUB_OPTS
+      -r RESOURCES, --resources RESOURCES
+                            Comma separated list of Grid'5000 elements (grid5000, site or cluster)
+                            -r element1,element2 for date and max modes
+                            -r element1:n_nodes1,element2:n_nodes2 for free mode
+      -b BLACKLIST, --blacklist BLACKLIST
+                            Remove clusters from planning computation
+      -R RATIO, --ratio RATIO
+                            Apply a given ratio to the resources found, works only for mode date and max
+      -o OARGRIDSUB_OPTS, --oargridsub_opts OARGRIDSUB_OPTS
                             Extra options to pass to the oargridsub command line
-                            (none)
-        --blacklist=BLACKLIST
-                            Blacklist some clusters
+      -k, --kavlan          Ask for a KaVLAN
+      -j JOB_NAME, --job_name JOB_NAME
+                            The job name passed to the OAR subjobs
     
-      Time:
-        Define options related to date and time.
+    Time:
+      Define options related to date and time.
     
-        -w WALLTIME, --walltime=WALLTIME
-                            reservation walltime (1:00:00)
-        -s STARTDATE, --startdate=STARTDATE
-                            Starting date in OAR date format (2013-10-24 13:07:11)
-        -e ENDDATE, --enddate=ENDDATE
-                            End date in OAR date format (2013-10-27 12:07:11)
+      -w WALLTIME, --walltime WALLTIME
+                            Reservation walltime in OAR format
+      -s STARTDATE, --startdate STARTDATE
+                            Starting date in OAR format
+      -e ENDDATE, --enddate ENDDATE
+                            End date in OAR format
+      -c, --charter         Avoid charter periods
     
-    Examples :
-    Finding the number of available nodes from date to date + walltime
-    funk.py -w 1:00:00 -m date -r grid5000
-    Finding the first free slots for a resource combination
-    funk.py -w 2:00:00 -m free -r lille:10,lyon:10,sophia:10
-    Finding the maximum number of nodes available for the resource and with a
-    KaVLAN
-    funk.py -w 10:00:00 -m max -r lyon,sophia,edel -k
+    Examples: 
+    Number of available nodes on stremi cluster from date to date + walltime 
+      funk -m date -s "2013-11-18 10:27:25" -r stremi
+    First free slots for a resource combination with deploy job type and a KaVLAN
+      funk -m free -w 2:00:00 -r grid5000:100,taurus:4 -o "-t deploy" -k
+    Maximum number of nodes available for the resources, avoiding charter periods
+      funk -m max -w 10:00:00 -r nancy,paradent,edel -c 
+    Issues/features requets can be reported to https://github.com/lpouillo/Funk
+
 
 
