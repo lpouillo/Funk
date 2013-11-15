@@ -28,7 +28,7 @@ epilog = style.host('Examples:')+' \nNumber of available nodes on stremi cluster
     style.command('  %(prog)s -m free -w 2:00:00 -r grid5000:100,taurus:4 -o "-t deploy" -k\n')+\
     'Maximum number of nodes available for the resources, avoiding charter periods\n'+\
     style.command('  %(prog)s -m max -w 10:00:00 -r nancy,paradent,edel -c \n')+\
-    'Issues/features requets can be reported to '+style.emph('https://github.com/lpouillo/Funk')
+    'Issues/features requests can be reported to '+style.emph('https://github.com/lpouillo/Funk')
 
 parser = ArgumentParser( prog = prog, 
                          description = description, 
