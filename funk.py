@@ -4,12 +4,9 @@
 #    Funk: (F)ind (U)r (N)odes on G5(K)
 #     Created by L. Pouilloux and M. Imbert (INRIA, 2013)
 #
-import logging, os
+from argparse import ArgumentParser, RawTextHelpFormatter
 from pprint import pprint, pformat
-from socket import getfqdn
-from optparse import OptionParser, OptionGroup
-from execo import logger, Local
-from execo.time_utils import sleep
+from execo import logger
 from execo.log import style
 from execo_g5k.oar import oar_date_to_unixts, format_oar_date, oar_duration_to_seconds
 import execo_g5k.api_utils as API
@@ -17,155 +14,134 @@ from execo_g5k.planning import *
 
 
 
-usage = "usage: %prog [-w WALLTIME] [-m MODE] [-r element1:n_nodes1,element2:n_nodes2]  "
-description = '''This tool determine when the resources you need are available on '''.ljust(100)+\
-    '''Grid'5000 platform thanks to the analysis of Gantt diagram obtained  '''.ljust(100)+\
-    '''from API and can make the oargrid reservation. It has three modes'''.ljust(100)+\
-    ''' - '''+style.emph('date')+'''  = give you the number of nodes available (default)                                                    
-  - '''+style.emph('free')+''' = find the slots for a combination of resources                                
-  - '''+style.emph('max')+'''  = find the maximum number of nodes for the period specified.'''.ljust(100)+\
- '''                             
- Require execo 2.2, http://execo.gforge.inria.fr/doc/
- '''
-epilog = """Examples :                        
-                                  
-    Finding the number of available nodes from date to date + walltime                    
-    funk.py -w 1:00:00 -m date -r grid5000                        
-                                  
-    Finding the first free slots for a resource combination               
-                                                              
-    funk.py -w 2:00:00 -m free -r lille:10,lyon:10,sophia:10                          
-                                  
-    Finding the maximum number of nodes available for the resource and with a KaVLAN                        
-                                              
-    funk.py -w 10:00:00 -m max -r lyon,sophia,edel -k  
-"""
+prog = 'funk'
+description = 'This tool helps you to find resources on '+\
+    style.log_header("Grid'5000")+' platform. It has three modes: \n - '+\
+    style.host('date')+' = give you the number of nodes available at a given date, \n - '+\
+    style.host('free')+' = find the next free slot for a combination of resources, \n - '+\
+    style.host('max')+'  = find the maximum number of nodes for the period specified.\n\n'+\
+    'If no arguments is given, compile the planning of the whole platform and generate an '+\
+    'oargridsub command line with all available resources for 1 hour. \n'+\
+    'Based execo 2.5, '+style.emph('http://execo.gforge.inria.fr/doc/')+' and the Grid\'5000 Job API, '+\
+    style.emph('https://api.grid5000.fr')+'.'
+epilog = style.host('Examples:')+' \nNumber of available nodes on stremi cluster from date to date + walltime \n'+\
+    style.command('  %(prog)s -m date -s "'+\
+    format_oar_date(int(time()+timedelta_to_seconds(timedelta(days = 3, minutes = 1))))+'" -r stremi\n')+\
+    'First free slots for a resource combination with deploy job type and a KaVLAN\n'+\
+    style.command('  %(prog)s -m free -w 2:00:00 -r grid5000:100,taurus:4 -o "-t deploy" -k\n')+\
+    'Maximum number of nodes available for the resources, avoiding charter periods\n'+\
+    style.command('  %(prog)s -m max -w 10:00:00 -r nancy,paradent,edel -c \n')+\
+    'Issues/features requets can be reported to '+style.emph('https://github.com/lpouillo/Funk')
 
-parser = OptionParser(usage = usage, description = description, epilog = epilog)
+parser = ArgumentParser( prog = prog, 
+                         description = description, 
+                         epilog = epilog, 
+                         formatter_class = RawTextHelpFormatter,
+                         add_help = False)
 
-optinout= OptionGroup(parser, "General options", "Define mode and controls I/O.")
-optinout.add_option("-m", "--mode",
+optinout = parser.add_argument_group( style.host("General options"), "Define mode and controls I/O.")
+optinout.add_argument("-h", "--help", action="help", help="show this help message and exit")
+optinout.add_argument("-m", "--mode",
                 dest = "mode", 
                 default = 'date',
-                help = "Setup the mode: date, free or max (%default)")
-optinout.add_option("-y", "--yes",
+                help = "Setup the mode: date, free or max")
+optinout.add_argument("-y", "--yes",
                 action = "store_true", 
                 dest = "yes", 
                 default = False,
-                help = "Perform the reservation automatically (%default)")
-optinout.add_option("-q", "--quiet", 
+                help = "Perform the reservation automatically")
+optio = optinout.add_mutually_exclusive_group()
+optio.add_argument("-q", "--quiet", 
                 dest = "quiet",
                 action = "store_true", 
                 default = False,    
-                help = "Run without printing anything (%default)")
-optinout.add_option("-v", "--verbose", 
+                help = "Run without printing anything")
+optio.add_argument("-v", "--verbose", 
                 dest = "verbose",
                 action = "store_true", 
                 default = False,    
-                help = "Run in verbose mode (%default)")
-optinout.add_option("-p", "--plots", 
-                dest = "plots",
-                action = "store_true", 
-                default = False,    
-                help = "Draw plots (gantt, free, max) (%default)")
-optinout.add_option("-n", "--name", 
-                dest = "name", 
-                default = "Powered by FUNK",    
-                help="Ask for a vlan (%default)")
-optinout.add_option("-R", "--ratio",
-                dest = "ratio",
-                type = "float",
-                default = None,
-                help = "reserve the given ratio of the resources")
-optinout.add_option("-c", "--charter",
-                dest = "charter",
-                default = False,
-                action = "store_true",
-                help = "avoid charter periods")
+                help = "Run in verbose mode")
+optinout.add_argument("-p", "--prog", 
+                dest = "prog",     
+                help = "The program to be run when the reservation start")
 
-parser.add_option_group(optinout)
-
-optreservation = OptionGroup(parser, "Resources", "Customize your Grid'5000 topology.")
-optreservation.add_option("-r", "--resources", 
+optreservation = parser.add_argument_group(style.host("Reservation"), "Customize your Grid'5000 reservation.")
+optreservation.add_argument("-r", "--resources", 
                 dest="resources", 
                 default = "grid5000",
-                help = "comma separated list of 'element1:n_nodes1,element2:n_nodes2', element can be a cluster, site or grid5000")
-optreservation.add_option("-k", "--kavlan", 
+                help = "Comma separated list of Grid'5000 elements (grid5000, site or cluster)"\
+                    "\n-r element1,element2 for date and max modes"+\
+                    "\n-r element1:n_nodes1,element2:n_nodes2 for free mode")
+optreservation.add_argument("-b", "--blacklist", 
+                dest = "blacklist", 
+                help = "Remove clusters from planning computation")
+optreservation.add_argument("-R", "--ratio",
+                dest = "ratio",
+                type = float,
+                default = None,
+                help = "Apply a given ratio to the resources found, works only for mode date and max")
+optreservation.add_argument("-o", "--oargridsub_opts", 
+                dest = "oargridsub_opts", 
+                help = "Extra options to pass to the oargridsub command line")
+optreservation.add_argument("-k", "--kavlan", 
                 dest = "kavlan_global", 
                 action = "store_true",
                 default = False,    
-                help="Ask for a KaVLAN global (%default)")
-optreservation.add_option("-o", "--oargridsub_opts", 
-                dest = "oargridsub_opts", 
-                help = "Extra options to pass to the oargridsub command line (%default)")
-optreservation.add_option("--blacklist", 
-                dest = "blacklist", 
-                help = "Blacklist some clusters")
+                help="Ask for a KaVLAN")
+optreservation.add_argument("-j", "--job_name", 
+                dest = "job_name", 
+                default = "FUNK",    
+                help="The job name passed to the OAR subjobs")
 
-parser.add_option_group(optreservation)
-
-opttime= OptionGroup(parser, "Time", "Define options related to date and time.")
-opttime.add_option("-w", "--walltime", 
+opttime= parser.add_argument_group(style.host("Time"), "Define options related to date and time.")
+opttime.add_argument("-w", "--walltime", 
                 dest = "walltime", 
                 default = '1:00:00',    
-                help = "reservation walltime (%default)")
-opttime.add_option("-s", "--startdate", 
+                help = "Reservation walltime in OAR format")
+opttime.add_argument("-s", "--startdate", 
                 dest = "startdate", 
                 default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(minutes = 1)))),    
-                help = "Starting date in OAR date format (%default)")
-opttime.add_option("-e", "--enddate", 
+                help = "Starting date in OAR format")
+opttime.add_argument("-e", "--enddate", 
                 dest = "enddate", 
-                default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(days = 3, minutes = 1)))),    
-                help = "End date in OAR date format (%default)")
+                default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(days = 7, minutes = 1)))),    
+                help = "End date in OAR format")
+opttime.add_argument("-c", "--charter",
+                dest = "charter",
+                default = False,
+                action = "store_true",
+                help = "Avoid charter periods")
 
-parser.add_option_group(opttime)
-(options, args) = parser.parse_args()
+args = parser.parse_args()
 
-logger.debug('Options\n'+'\n'.join( [ style.emph(option.ljust(20))+\
-                    '= '+str(value).ljust(10) for option, value in vars(options).iteritems() if value is not None ]))
-
-# The first arugment of the script is the program to launch after the oargridsub command 
-prog = args[0] if len(args) == 1 else None
-
-if options.verbose:
-    logger.setLevel(logging.DEBUG)
-elif options.quiet:
-    logger.setLevel(logging.WARN)
+if args.verbose:
+    logger.setLevel('DEBUG')
+elif args.quiet:
+    logger.setLevel('WARN')
 else:
-    logger.setLevel(logging.INFO)
+    logger.setLevel('INFO')
 
 logger.debug('Options\n'+'\n'.join( [ style.emph(option.ljust(20))+\
-                    '= '+str(value).ljust(10) for option, value in vars(options).iteritems() if value is not None ]))
-
-
-
-
-log_endate = options.enddate if options.mode is not 'date' else format_oar_date( oar_date_to_unixts(options.startdate) + oar_duration_to_seconds(options.walltime))
+                    '= '+str(value).ljust(10) for option, value in vars(args).iteritems() if value is not None ]))
+log_endate = args.enddate if args.mode is not 'date' else format_oar_date( oar_date_to_unixts(args.startdate) + oar_duration_to_seconds(args.walltime))
 logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K --'))
-logger.info('From %s to %s', style.emph(options.startdate), 
+logger.info('From %s to %s', style.emph(args.startdate), 
             style.emph(log_endate))
-
-
-logger.info('Resources: %s', style.emph(options.resources))
-logger.info('Walltime: %s', style.emph(options.walltime))
-logger.info('Mode: %s', style.emph(options.mode))
-if prog is not None:
-    logger.info('Program: %s', style.emph(prog))
-    
-if options.plots:
-    if 'grid5000.fr' in getfqdn():
-        options.plots = False
-        logger.warning('Plots are disabled on Grid5000 frontend until the migration to Wheezy')
-if options.blacklist is not None:
-    blacklisted = options.blacklist.split(',')
+logger.info('Resources: %s', style.emph(args.resources))
+logger.info('Walltime: %s', style.emph(args.walltime))
+logger.info('Mode: %s', style.emph(args.mode))
+if args.prog is not None:
+    logger.info('Program: %s', style.emph(args.prog))
+# Creating resources dict from command line options
+if args.blacklist is not None:
+    blacklisted = args.blacklist.split(',')
 else:
     blacklisted = []
-
 resources_wanted = {}
-for element in options.resources.split(','):
+for element in args.resources.split(','):
     if ':' in element:
         element_uid, n_nodes = element.split(':')
-    elif options.mode != 'free': 
+    elif args.mode != 'free': 
         element_uid, n_nodes = element, 0
     else:
         logger.error('You must specify the number of host element:n_nodes when using free mode')
@@ -175,45 +151,33 @@ for element in options.resources.split(','):
         resources_wanted[element_uid] = int(n_nodes)
 
 planning = Planning(resources_wanted, 
-                    oar_date_to_unixts(options.startdate), 
-                    oar_date_to_unixts(options.enddate), 
-                    options.kavlan_global)
-
-planning.compute(out_of_chart = options.charter)
-
-
-
-if options.plots:
-    draw_gantt(planning.planning)
-
-planning.compute_slots(options.walltime)
-
+                    oar_date_to_unixts(args.startdate), 
+                    oar_date_to_unixts(args.enddate), 
+                    args.kavlan_global)
+planning.compute(out_of_chart = args.charter)
+planning.compute_slots(args.walltime)
 logger.debug(planning.slots)
 
-
-if options.plots:
-    draw_slots(planning.slots, oar_date_to_unixts(options.enddate))
-
-if options.mode == 'date':
+if args.mode == 'date':
     # In date mode, funk take the first slot available for the wanted walltime
     resources = planning.slots[0][2]
     if resources['grid5000'] == 0:
         logger.error('No nodes on %s available at %s for %s',
                     ''.join( [ element for element in resources_wanted.iterkeys()]),
-                     options.startdate, options.walltime)
+                     args.startdate, args.walltime)
         exit()       
     startdate = planning.slots[0][0]
     
-    if not options.ratio:
-        options.ratio = 0.9
+    if not args.ratio:
+        args.ratio = 0.9
     
-elif options.mode == 'max':
-    max_slot = planning.find_max_slot(options.walltime, resources_wanted)
+elif args.mode == 'max':
+    max_slot = planning.find_max_slot(args.walltime, resources_wanted)
     resources = max_slot[2]
     startdate = format_oar_date(max_slot[0])
     
-elif options.mode == 'free':
-    free_slots = planning.find_free_slots(options.walltime, resources_wanted)
+elif args.mode == 'free':
+    free_slots = planning.find_free_slots(args.walltime, resources_wanted)
     if len(free_slots) == 0:
         logger.error('Unable to find a slot for your resources:\n%s', pformat(resources_wanted))
         exit()
@@ -221,7 +185,7 @@ elif options.mode == 'free':
     resources = distribute_hosts(free_slots[0], resources_wanted)
     
 else:
-    logger.error('Mode '+options.mode+' is not supported, funk -h for help')
+    logger.error('Mode '+args.mode+' is not supported, funk -h for help')
     exit()
 
 def show_resources(resources):
@@ -241,9 +205,9 @@ def show_resources(resources):
 
 show_resources(resources)
 
-if options.blacklist is not None:
+if args.blacklist is not None:
     remove_nodes = 0
-    for element in options.blacklist.split(','):
+    for element in args.blacklist.split(','):
         if element in resources:
             if element in get_g5k_clusters():
                 remove_nodes += resources[element]
@@ -257,31 +221,31 @@ if options.blacklist is not None:
                 del resources[element]
     if 'grid5000' in resources:
         resources['grid5000'] -= remove_nodes
-    logger.info("after removing blacklisted elements %s, actual resources reserved:" % (options.blacklist,))
+    logger.info("after removing blacklisted elements %s, actual resources reserved:" % (args.blacklist,))
     show_resources(resources)
 
-if options.ratio:
+if args.ratio:
     for site in get_g5k_sites():
         if site in resources.keys():
             tmp_total_site_nodes = 0
             for cluster in get_site_clusters(site):
-                if cluster in resources.keys():
-                    resources[cluster] = int(resources[cluster] * options.ratio)
+                if cluster in resources.keys(): 
+                    resources[cluster] = int(resources[cluster] * args.ratio)
                     tmp_total_site_nodes += resources[cluster]
             if resources_wanted.has_key(site):
-                resources[site] = int(resources_wanted[site] * options.ratio)
+                resources[site] = int(resources_wanted[site] * args.ratio)
             else:
                 resources[site] = tmp_total_site_nodes
-    logger.info("after applying ratio %f, actual resources reserved:" % (options.ratio,))
+    logger.info("after applying ratio %f, actual resources reserved:" % (args.ratio,))
     show_resources(resources)
 
 oargrid_job_id = create_reservation(startdate,
                                     resources,
-                                    options.walltime,
-                                    oargridsub_opts = options.oargridsub_opts,
-                                    auto_reservation = options.yes,
-                                    prog = prog,
-                                    name = options.name)
+                                    args.walltime,
+                                    oargridsub_opts = args.oargridsub_opts,
+                                    auto_reservation = args.yes,
+                                    prog = args.prog,
+                                    name = args.job_name)
 
 if oargrid_job_id is None:
     exit(1)
