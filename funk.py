@@ -101,7 +101,7 @@ opttime.add_argument("-s", "--startdate",
                 help = "Starting date in OAR format")
 opttime.add_argument("-e", "--enddate", 
                 dest = "enddate", 
-                default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(days = 7, minutes = 1)))),    
+                default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(weeks = 3, minutes = 1)))),    
                 help = "End date in OAR format")
 opttime.add_argument("-c", "--charter",
                 dest = "charter",
@@ -173,6 +173,7 @@ if args.mode == 'date':
 elif args.mode == 'max':
     # In max mode, funk take the slot available with the maximum number of resources 
     max_slot = planning.find_max_slot(args.walltime, resources_wanted)
+    logger.debug(pformat(max_slot))
     resources = max_slot[2]
     startdate = format_oar_date(max_slot[0])
     
