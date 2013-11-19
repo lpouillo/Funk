@@ -259,6 +259,7 @@ else:
     jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
     for job_id, site in jobs:
         log += '\n'+style.emph(site).ljust(25)+str(job_id).rjust(9)
+    log += '\ngrid job key: ' + get_oargrid_job_key(oargrid_job_id)
     logger.info(log)
     exit(oargrid_job_id)
 
