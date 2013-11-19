@@ -157,7 +157,6 @@ planning = Planning(resources_wanted,
                     args.kavlan_global)
 planning.compute(out_of_chart = args.charter)
 planning.compute_slots(args.walltime)
-logger.debug(planning.slots)
 
 # Determine the slot to use
 if args.mode == 'date':
