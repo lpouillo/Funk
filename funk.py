@@ -8,6 +8,7 @@ from argparse import ArgumentParser, RawTextHelpFormatter
 from pprint import pprint, pformat
 from execo import logger
 from execo.log import style
+from execo_g5k.oargrid import get_oargrid_job_key
 from execo_g5k.planning import *
 
 # Defining and anlyzing program options 
@@ -19,9 +20,10 @@ description = 'This tool helps you to find resources on '+\
     style.host('max')+'  = find the maximum number of nodes for the period specified.\n\n'+\
     'If no arguments is given, compile the planning of the whole platform and generate an '+\
     'oargridsub command line with all available resources for 1 hour. \n'+\
-    'Based execo 2.5, '+style.emph('http://execo.gforge.inria.fr/doc/')+' and the Grid\'5000 Job API, '+\
+    'Based on execo 2.2, '+style.emph('http://execo.gforge.inria.fr/doc/')+' and the Grid\'5000 Job API, '+\
     style.emph('https://api.grid5000.fr')+'.'
-epilog = style.host('Examples:')+' \nNumber of available nodes on stremi cluster from date to date + walltime \n'+\
+epilog = style.host('Examples:')+\
+    '\nNumber of available nodes on stremi cluster from date to date + walltime \n'+\
     style.command('  %(prog)s -m date -s "'+\
     format_oar_date(int(time()+timedelta_to_seconds(timedelta(days = 3, minutes = 1))))+'" -r stremi\n')+\
     'First free slots for a resource combination with deploy job type and a KaVLAN\n'+\
@@ -36,12 +38,16 @@ parser = ArgumentParser( prog = prog,
                          formatter_class = RawTextHelpFormatter,
                          add_help = False)
 
-optinout = parser.add_argument_group( style.host("General options"), "Define mode and controls I/O.")
-optinout.add_argument("-h", "--help", action="help", help="show this help message and exit")
+optinout = parser.add_argument_group( style.host("General options"),
+                "Define mode and controls I/O.")
+optinout.add_argument("-h", "--help", 
+                action = "help", 
+                help = "show this help message and exit")
 optinout.add_argument("-m", "--mode",
                 dest = "mode", 
                 default = 'date',
-                help = "Setup the mode: date, free or max")
+                help = "Setup the mode: date, free or max "+\
+                    "\ndefault = %(default)s")
 optinout.add_argument("-y", "--yes",
                 action = "store_true", 
                 dest = "yes", 
@@ -62,13 +68,15 @@ optinout.add_argument("-p", "--prog",
                 dest = "prog",     
                 help = "The program to be run when the reservation start")
 
-optreservation = parser.add_argument_group(style.host("Reservation"), "Customize your Grid'5000 reservation.")
+optreservation = parser.add_argument_group(style.host("Reservation"), 
+                "Customize your Grid'5000 reservation.")
 optreservation.add_argument("-r", "--resources", 
                 dest="resources", 
                 default = "grid5000",
                 help = "Comma separated list of Grid'5000 elements (grid5000, site or cluster)"\
                     "\n-r element1,element2 for date and max modes"+\
-                    "\n-r element1:n_nodes1,element2:n_nodes2 for free mode")
+                    "\n-r element1:n_nodes1,element2:n_nodes2 for free mode"+\
+                    "\ndefault = %(default)s")
 optreservation.add_argument("-b", "--blacklist", 
                 dest = "blacklist", 
                 help = "Remove clusters from planning computation")
@@ -88,21 +96,25 @@ optreservation.add_argument("-k", "--kavlan",
 optreservation.add_argument("-j", "--job_name", 
                 dest = "job_name", 
                 default = "FUNK",    
-                help="The job name passed to the OAR subjobs")
+                help="The job name passed to the OAR subjobs"+\
+                    "\ndefault = %(default)s")
 
 opttime= parser.add_argument_group(style.host("Time"), "Define options related to date and time.")
 opttime.add_argument("-w", "--walltime", 
                 dest = "walltime", 
                 default = '1:00:00',    
-                help = "Reservation walltime in OAR format")
+                help = "Reservation walltime in OAR format"+\
+                    "\ndefault = %(default)s")
 opttime.add_argument("-s", "--startdate", 
                 dest = "startdate", 
                 default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(minutes = 1)))),    
-                help = "Starting date in OAR format")
+                help = "Starting date in OAR format"+\
+                    "\ndefault = %(default)s")
 opttime.add_argument("-e", "--enddate", 
                 dest = "enddate", 
                 default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(weeks = 3, minutes = 1)))),    
-                help = "End date in OAR format")
+                help = "End date in OAR format"+\
+                    "\ndefault = %(default)s")
 opttime.add_argument("-c", "--charter",
                 dest = "charter",
                 default = False,
@@ -258,7 +270,7 @@ else:
     jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
     for job_id, site in jobs:
         log += '\n'+style.emph(site).ljust(25)+str(job_id).rjust(9)
-    log += '\ngrid job key: ' + get_oargrid_job_key(oargrid_job_id)
+    log += '\n'+style.emph('Key file: ')+get_oargrid_job_key(oargrid_job_id)
     logger.info(log)
     exit(oargrid_job_id)
 
