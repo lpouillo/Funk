@@ -175,7 +175,6 @@ planning = get_planning(elements = resources_wanted.keys(), vlan = args.kavlan, 
             out_of_chart = args.charter, starttime = int(oar_date_to_unixts(args.startdate)), 
             endtime = int(oar_date_to_unixts(args.enddate)))
 
-
 slots = compute_slots(planning, args.walltime)
 
 # Determine the slot to use
@@ -218,7 +217,7 @@ else:
 
 
 # Showing the resources available
-def show_resources(resources, mode):
+def show_resources(resources):
     total_hosts = 0
     log = style.log_header('Resources')
     for site in get_g5k_sites():
@@ -227,13 +226,12 @@ def show_resources(resources, mode):
             log += '\n'+style.log_header(site).ljust(20)+' '+str(resources[site])+'\n'
             for cluster in get_site_clusters(site):
                 if cluster in resources.keys():
-                    if mode == 'free':
-                        total_hosts += resources[cluster]
-                        log += style.emph(cluster)+': '+str(resources[cluster])+'  '
+                    total_hosts += resources[cluster]
+                    log += style.emph(cluster)+': '+str(resources[cluster])+'  '
     logger.info(log)
     logger.info(style.log_header('total hosts: ') + str(total_hosts))
 
-show_resources(resources, args.mode)
+show_resources(resources)
 
 if args.blacklist is not None:
     remove_nodes = 0
@@ -254,7 +252,7 @@ if args.blacklist is not None:
     if 'grid5000' in resources:
         resources['grid5000'] -= remove_nodes
     logger.info("After removing blacklisted elements %s, actual resources reserved:" % (args.blacklist,))
-    show_resources(resources, args.mode)
+    show_resources(resources)
 
 if args.ratio:
     for site in get_g5k_sites():
@@ -269,7 +267,7 @@ if args.ratio:
             else:
                 resources[site] = tmp_total_site_nodes
     logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
-    show_resources(resources, args.mode)
+    show_resources(resources)
 
 
 
