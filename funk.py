@@ -177,6 +177,26 @@ planning = get_planning(elements = resources_wanted.keys(), vlan = args.kavlan, 
 
 slots = compute_slots(planning, args.walltime)
 
+if args.blacklist is not None:
+    for start, stop, slot in slots:
+        remove_nodes = 0
+        for element in args.blacklist.split(','):
+            if element in slot:
+                if element in get_g5k_clusters():
+                    remove_nodes += slot[element]
+                    slot[get_cluster_site(element)] -= slot[element]
+                    del slot[element]
+                if element in get_g5k_sites():
+                    for cluster in get_site_clusters(element):
+                        if cluster in slot:
+                            remove_nodes += slot[cluster]
+                            del slot[cluster]        
+                    del slot[element]
+            if 'kavlan' in slot and element in slot['kavlan']:
+                slot['kavlan'].remove(element)
+        if 'grid5000' in slot:
+            slot['grid5000'] -= remove_nodes
+
 # Determine the slot to use
 if args.mode == 'date':
     # In date mode, funk take the first slot available for the wanted walltime
@@ -233,26 +253,6 @@ def show_resources(resources):
 
 show_resources(resources)
 
-if args.blacklist is not None:
-    remove_nodes = 0
-    for element in args.blacklist.split(','):
-        if element in resources:
-            if element in get_g5k_clusters():
-                remove_nodes += resources[element]
-                resources[get_cluster_site(element)] -= resources[element]
-                del resources[element]
-            if element in get_g5k_sites():
-                for cluster in get_site_clusters(element):
-                    if cluster in resources:
-                        remove_nodes += resources[cluster]
-                        del resources[cluster]        
-                del resources[element]
-        if 'kavlan' in resources and element in resources['kavlan']:
-            resources['kavlan'].remove(element)
-    if 'grid5000' in resources:
-        resources['grid5000'] -= remove_nodes
-    logger.info("After removing blacklisted elements %s, actual resources reserved:" % (args.blacklist,))
-    show_resources(resources)
 
 if args.ratio:
     for site in get_g5k_sites():
