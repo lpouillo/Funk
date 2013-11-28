@@ -26,7 +26,7 @@ description = 'This tool helps you to find resources on '+\
 epilog = style.host('Examples:')+\
     '\nNumber of available nodes on stremi cluster from date to date + walltime \n'+\
     style.command('  %(prog)s -m date -s "'+\
-    format_oar_date(int(time()+timedelta_to_seconds(timedelta(days = 3, minutes = 1))))+'" -r stremi\n')+\
+    format_oar_date(int(time()+timedelta_to_seconds(timedelta( minutes = 1))))+'" -r stremi\n')+\
     'First free slots for a resource combination with deploy job type and a KaVLAN\n'+\
     style.command('  %(prog)s -m free -w 2:00:00 -r grid5000:100,taurus:4 -o "-t deploy" -k\n')+\
     'Maximum number of nodes available for the resources, avoiding charter periods\n'+\
