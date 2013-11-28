@@ -12,13 +12,14 @@ A Python tool that help you to find ressources for multisites experiments on the
      - max  = find the maximum number of nodes for the period specified.
     
     If no arguments is given, compile the planning of the whole platform and generate an oargridsub command line with all available resources for 1 hour. 
-    Based execo 2.5, http://execo.gforge.inria.fr/doc/ and the Grid'5000 Job API, https://api.grid5000.fr.
+    Based on execo 2.2, http://execo.gforge.inria.fr/doc/ and the Grid'5000 Job API, https://api.grid5000.fr.
     
     General options:
       Define mode and controls I/O.
     
       -h, --help            show this help message and exit
-      -m MODE, --mode MODE  Setup the mode: date, free or max
+      -m MODE, --mode MODE  Setup the mode: date, free or max 
+                            default = date
       -y, --yes             Perform the reservation automatically
       -q, --quiet           Run without printing anything
       -v, --verbose         Run in verbose mode
@@ -31,6 +32,7 @@ A Python tool that help you to find ressources for multisites experiments on the
                             Comma separated list of Grid'5000 elements (grid5000, site or cluster)
                             -r element1,element2 for date and max modes
                             -r element1:n_nodes1,element2:n_nodes2 for free mode
+                            default = grid5000
       -b BLACKLIST, --blacklist BLACKLIST
                             Remove clusters from planning computation
       -R RATIO, --ratio RATIO
@@ -40,26 +42,27 @@ A Python tool that help you to find ressources for multisites experiments on the
       -k, --kavlan          Ask for a KaVLAN
       -j JOB_NAME, --job_name JOB_NAME
                             The job name passed to the OAR subjobs
+                            default = FUNK
     
     Time:
       Define options related to date and time.
     
       -w WALLTIME, --walltime WALLTIME
                             Reservation walltime in OAR format
+                            default = 1:00:00
       -s STARTDATE, --startdate STARTDATE
                             Starting date in OAR format
+                            default = 2013-11-28 13:41:30
       -e ENDDATE, --enddate ENDDATE
                             End date in OAR format
+                            default = 2013-12-19 13:41:30
       -c, --charter         Avoid charter periods
     
-    Examples: 
+    Examples:
     Number of available nodes on stremi cluster from date to date + walltime 
-      funk -m date -s "2013-11-18 10:27:25" -r stremi
+      funk -m date -s "2013-11-28 13:41:30" -r stremi
     First free slots for a resource combination with deploy job type and a KaVLAN
       funk -m free -w 2:00:00 -r grid5000:100,taurus:4 -o "-t deploy" -k
     Maximum number of nodes available for the resources, avoiding charter periods
       funk -m max -w 10:00:00 -r nancy,paradent,edel -c 
-    Issues/features requets can be reported to https://github.com/lpouillo/Funk
-
-
-
+    Issues/features requests can be reported to https://github.com/lpouillo/Funk
