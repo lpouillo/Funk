@@ -178,8 +178,6 @@ planning = get_planning(elements = resources_wanted.keys(), vlan = args.kavlan, 
 
 slots = compute_slots(planning, args.walltime)
 
-print resources_wanted
-
 # Determine the slot to use
 if args.mode == 'date':
     # In date mode, funk take the first slot available for the wanted walltime
