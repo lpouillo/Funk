@@ -8,8 +8,9 @@ from argparse import ArgumentParser, RawTextHelpFormatter
 from pprint import pprint, pformat
 from execo import logger
 from execo.log import style
-from execo_g5k.oargrid import get_oargrid_job_key
+from execo_g5k.oargrid import get_oargrid_job_key, get_oargrid_job_oar_jobs
 from execo_g5k.planning import *
+from execo_g5k.oar import oar_duration_to_seconds, format_oar_date, oar_date_to_unixts
 
 # Defining and anlyzing program options 
 prog = 'funk'
@@ -89,10 +90,14 @@ optreservation.add_argument("-o", "--oargridsub_opts",
                 dest = "oargridsub_opts", 
                 help = "Extra options to pass to the oargridsub command line")
 optreservation.add_argument("-k", "--kavlan", 
-                dest = "kavlan_global", 
+                dest = "kavlan", 
                 action = "store_true",
                 default = False,    
                 help="Ask for a KaVLAN")
+# Subnet option not implemented in new execo_g5k.planning 
+#optreservation.add_argument("-n", "--subnet", 
+#                dest = "subnet",    
+#                help="Ask for a subnet")
 optreservation.add_argument("-j", "--job_name", 
                 dest = "job_name", 
                 default = "FUNK",    
@@ -157,50 +162,62 @@ for element in args.resources.split(','):
         element_uid, n_nodes = element, 0
     else:
         logger.error('You must specify the number of host element:n_nodes when using free mode')
-        exit()
-    
+        exit()    
     if element_uid not in blacklisted:
         resources_wanted[element_uid] = int(n_nodes)
 
+if args.kavlan:
+    resources_wanted['kavlan'] = 1
+
+
 # Computing the planning of the ressources wanted
-planning = Planning(resources_wanted, 
-                    oar_date_to_unixts(args.startdate), 
-                    oar_date_to_unixts(args.enddate), 
-                    args.kavlan_global)
-planning.compute(out_of_chart = args.charter)
-planning.compute_slots(args.walltime)
+planning = get_planning(elements = resources_wanted.keys(), vlan = args.kavlan, subnet = False, storage = False, 
+            out_of_chart = args.charter, starttime = int(oar_date_to_unixts(args.startdate)), 
+            endtime = int(oar_date_to_unixts(args.enddate)))
+
+
+slots = compute_slots(planning, args.walltime)
+
+print resources_wanted
 
 # Determine the slot to use
 if args.mode == 'date':
     # In date mode, funk take the first slot available for the wanted walltime
-    resources = planning.slots[0][2]
-    if resources['grid5000'] == 0:
-        logger.error('No nodes on %s available at %s for %s',
-                    ''.join( [ element for element in resources_wanted.iterkeys()]),
-                     args.startdate, args.walltime)
-        exit()       
-    startdate = planning.slots[0][0]
+    slot = find_first_slot( slots, resources_wanted.keys())
+    startdate = slot[0]
+    resources = slot[2] 
+    if resources_wanted.has_key('grid5000'):
+        resources_wanted['grid5000'] = resources['grid5000']
+        resources = distribute_hosts_grid5000(resources, resources_wanted)
     
 elif args.mode == 'max':
     # In max mode, funk take the slot available with the maximum number of resources 
-    max_slot = planning.find_max_slot(args.walltime, resources_wanted)
-    logger.debug(pformat(max_slot))
-    resources = max_slot[2]
-    startdate = format_oar_date(max_slot[0])
+    max_slot = find_max_slot(slots, resources_wanted.keys())
+    startdate = max_slot[0]
+    resources = { element: n_nodes for element, n_nodes in max_slot[2].iteritems() 
+                 if element in resources_wanted.keys() }
+    
+    if resources.has_key('grid5000'):
+        resources = distribute_hosts_grid5000(max_slot[2], resources)
     
 elif args.mode == 'free':
-    # In free mode, funk take the first slot that match your resources 
-    free_slots = planning.find_free_slots(args.walltime, resources_wanted)
+    # In free mode, funk take the first slot that match your resources    
+    free_slots = find_free_slots(slots, resources_wanted)
     if len(free_slots) == 0:
-        logger.error('Unable to find a slot for your resources:\n%s', pformat(resources_wanted))
+        logger.error('Unable to find a slot for your resources:\n%s', 
+                     pformat(resources_wanted))
         exit()
-    startdate = format_oar_date(free_slots[0][0])
-    resources = distribute_hosts(free_slots[0], resources_wanted)
+    startdate = free_slots[0][0]
+    resources = resources_wanted
+
+    if resources.has_key('grid5000'):
+        resources = distribute_hosts_grid5000(free_slots[0][2], resources_wanted)
     
 else:
     # No other modes supported
     logger.error('Mode '+args.mode+' is not supported, funk -h for help')
     exit()
+
 
 # Showing the resources available
 def show_resources(resources, mode):
@@ -230,10 +247,12 @@ if args.blacklist is not None:
                 del resources[element]
             if element in get_g5k_sites():
                 for cluster in get_site_clusters(element):
-                    remove_nodes += resources[cluster]
-                    del resources[cluster]
-                
+                    if cluster in resources:
+                        remove_nodes += resources[cluster]
+                        del resources[cluster]        
                 del resources[element]
+        if 'kavlan' in resources and element in resources['kavlan']:
+            resources['kavlan'].remove(element)
     if 'grid5000' in resources:
         resources['grid5000'] -= remove_nodes
     logger.info("After removing blacklisted elements %s, actual resources reserved:" % (args.blacklist,))
@@ -254,7 +273,12 @@ if args.ratio:
     logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
     show_resources(resources, args.mode)
 
+
+
+
 # Creating the reservation
+
+    
 oargrid_job_id = create_reservation(startdate,
                                     resources,
                                     args.walltime,
