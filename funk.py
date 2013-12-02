@@ -185,20 +185,20 @@ planning = get_planning(elements = resources_wanted.keys(),
 slots = compute_slots(planning, args.walltime)
 
 
-if True:
 # Determine the slot to use
-#if args.mode == 'date':
+if args.mode == 'date':
     # In date mode, funk take the first slot available for the wanted walltime
     startdate, enddate, resources = find_first_slot( slots, resources_wanted )
-    show_resources(resources, 'Resources date')
-#elif args.mode == 'max':
+
+elif args.mode == 'max':
     # In max mode, funk take the slot available with the maximum number of resources 
     startdate, enddate, resources = find_max_slot( slots, resources_wanted )
-    show_resources(resources, 'Resources max')
-#elif args.mode == 'free':
+
+    
+elif args.mode == 'free':
     # In free mode, funk take the first slot that match your resources    
-#    startdate, enddate, resources = find_free_slot( slots, resources_wanted )
-#    show_resources(resources, 'Resources free')
+    startdate, enddate, resources = find_free_slot( slots, resources_wanted )
+    
 
 
 exit()
