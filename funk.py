@@ -138,22 +138,16 @@ else:
 # Printing welcome message
 logger.debug('Options\n'+'\n'.join( [ style.emph(option.ljust(20))+\
                     '= '+str(value).ljust(10) for option, value in vars(args).iteritems() if value is not None ]))
-log_endate = args.enddate if args.mode is not 'date' else format_oar_date( oar_date_to_unixts(args.startdate) + oar_duration_to_seconds(args.walltime))
 logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K --'))
-logger.info('From %s to %s', style.emph(args.startdate), 
-            style.emph(log_endate))
-logger.info('Resources: %s', style.emph(args.resources))
+logger.info('From %s to %s', style.emph(args.startdate), style.emph(args.enddate))
+
 logger.info('Walltime: %s', style.emph(args.walltime))
 logger.info('Mode: %s', style.emph(args.mode))
+
 if args.prog is not None:
     logger.info('Program: %s', style.emph(args.prog))
     
 # Creating resources dict from command line options
-if args.blacklist is not None:
-    blacklisted = args.blacklist.split(',')
-else:
-    blacklisted = []
-    
 resources_wanted = {}
 for element in args.resources.split(','):
     if ':' in element:
@@ -163,95 +157,57 @@ for element in args.resources.split(','):
     else:
         logger.error('You must specify the number of host element:n_nodes when using free mode')
         exit()    
-    if element_uid not in blacklisted:
-        resources_wanted[element_uid] = int(n_nodes)
-
+    resources_wanted[element_uid] = int(n_nodes)
 if args.kavlan:
     resources_wanted['kavlan'] = 1
 
+# Creating list of blacklisted elements
+if args.blacklist is not None:
+    blacklisted = args.blacklist.split(',')
+else:
+    blacklisted = []
+
+
+show_resources(resources_wanted, 'Wanted resources')
+    
+logger.info('Compiling planning for '+'%s',','.join( [style.emph(key) for key in resources_wanted.keys() ] ) )
 
 # Computing the planning of the ressources wanted
-planning = get_planning(elements = resources_wanted.keys(), vlan = args.kavlan, subnet = False, storage = False, 
-            out_of_chart = args.charter, starttime = int(oar_date_to_unixts(args.startdate)), 
+planning = get_planning(elements = resources_wanted.keys(), 
+            excluded_resources = blacklisted,
+            vlan = args.kavlan, 
+            subnet = False, 
+            storage = False, 
+            out_of_chart = args.charter, 
+            starttime = int(oar_date_to_unixts(args.startdate)), 
             endtime = int(oar_date_to_unixts(args.enddate)))
 
 slots = compute_slots(planning, args.walltime)
 
-if args.blacklist is not None:
-    for start, stop, slot in slots:
-        remove_nodes = 0
-        for element in args.blacklist.split(','):
-            if element in slot:
-                if element in get_g5k_clusters():
-                    remove_nodes += slot[element]
-                    slot[get_cluster_site(element)] -= slot[element]
-                    del slot[element]
-                if element in get_g5k_sites():
-                    for cluster in get_site_clusters(element):
-                        if cluster in slot:
-                            remove_nodes += slot[cluster]
-                            del slot[cluster]        
-                    del slot[element]
-            if 'kavlan' in slot and element in slot['kavlan']:
-                slot['kavlan'].remove(element)
-        if 'grid5000' in slot:
-            slot['grid5000'] -= remove_nodes
 
+if True:
 # Determine the slot to use
-if args.mode == 'date':
+#if args.mode == 'date':
     # In date mode, funk take the first slot available for the wanted walltime
-    slot = find_first_slot( slots, resources_wanted.keys())
-    startdate = slot[0]
-    resources = slot[2] 
-    if resources_wanted.has_key('grid5000'):
-        resources_wanted['grid5000'] = resources['grid5000']
-        resources = distribute_hosts_grid5000(resources, resources_wanted)
-    
-elif args.mode == 'max':
+    startdate, enddate, resources = find_first_slot( slots, resources_wanted )
+    show_resources(resources, 'Resources date')
+#elif args.mode == 'max':
     # In max mode, funk take the slot available with the maximum number of resources 
-    max_slot = find_max_slot(slots, resources_wanted.keys())
-    startdate = max_slot[0]
-    resources = { element: n_nodes for element, n_nodes in max_slot[2].iteritems() 
-                 if element in resources_wanted.keys() }
-    
-    if resources.has_key('grid5000'):
-        resources = distribute_hosts_grid5000(max_slot[2], resources)
-    
-elif args.mode == 'free':
+    startdate, enddate, resources = find_max_slot( slots, resources_wanted )
+    show_resources(resources, 'Resources max')
+#elif args.mode == 'free':
     # In free mode, funk take the first slot that match your resources    
-    free_slots = find_free_slots(slots, resources_wanted)
-    if len(free_slots) == 0:
-        logger.error('Unable to find a slot for your resources:\n%s', 
-                     pformat(resources_wanted))
-        exit()
-    startdate = free_slots[0][0]
-    resources = resources_wanted
+#    startdate, enddate, resources = find_free_slot( slots, resources_wanted )
+#    show_resources(resources, 'Resources free')
 
-    if resources.has_key('grid5000'):
-        resources = distribute_hosts_grid5000(free_slots[0][2], resources_wanted)
-    
-else:
-    # No other modes supported
-    logger.error('Mode '+args.mode+' is not supported, funk -h for help')
+
+exit()
+if startdate is None:
+    logger.error('Unable to find a slot for your requests.')
     exit()
 
-
-# Showing the resources available
-def show_resources(resources):
-    total_hosts = 0
-    log = style.log_header('Resources')
-    for site in get_g5k_sites():
-        if site in resources.keys():
-            total_hosts += resources[site]
-            log += '\n'+style.log_header(site).ljust(20)+' '+str(resources[site])+'\n'
-            for cluster in get_site_clusters(site):
-                if cluster in resources.keys():
-                    total_hosts += resources[cluster]
-                    log += style.emph(cluster)+': '+str(resources[cluster])+'  '
-    logger.info(log)
-    logger.info(style.log_header('total hosts: ') + str(total_hosts))
-
-show_resources(resources)
+logger.info(style.log_header('Chosen slot ')+format_oar_date(startdate)+' -> '+format_oar_date(enddate))
+show_resources(resources, 'Resources available')
 
 
 if args.ratio:
@@ -270,18 +226,15 @@ if args.ratio:
     show_resources(resources)
 
 
-
-
 # Creating the reservation
-
-    
 oargrid_job_id = create_reservation(startdate,
                                     resources,
-                                    args.walltime,
+                                    walltime = args.walltime,
                                     oargridsub_opts = args.oargridsub_opts,
                                     auto_reservation = args.yes,
                                     prog = args.prog,
                                     name = args.job_name)
+
 
 if oargrid_job_id is None:
     exit(1)
