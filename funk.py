@@ -201,7 +201,6 @@ elif args.mode == 'free':
     
 
 
-exit()
 if startdate is None:
     logger.error('Unable to find a slot for your requests.')
     exit()
