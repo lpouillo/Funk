@@ -278,16 +278,44 @@ if args.ratio:
     logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
     show_resources(resources)
 
-# Creating the reservation
-oargrid_job_id = create_reservation(startdate,
-                                    resources,
-                                    walltime = args.walltime,
-                                    oargridsub_opts = args.oargridsub_opts,
-                                    auto_reservation = args.yes,
-                                    prog = args.prog,
-                                    name = args.job_name)
 
-exit(oargrid_job_id)
+
+job_specs = get_job_specs(resources, name = args.job_name)
+
+
+if args.prog is not None:
+    args.oargridsub_opts += ' -p '+args.prog
+    
+logger.info('Reservation command: \n\033[1m%s\033[0m',
+get_oargridsub_commandline(job_specs, walltime = args.walltime, 
+         additional_options = args.oargridsub_opts, reservation_date = format_oar_date(startdate)) )
+ 
+if args.yes:            
+    reservation = 'y'
+else:            
+    reservation = raw_input('Do you want me to do the reservation (y/[N]): ')
+
+oargrid_job_id = None
+if reservation in [ 'y', 'Y', 'yes'] :
+    (oargrid_job_id, _) = oargridsub(job_specs, walltime = args.walltime, 
+         additional_options = args.oargridsub_opts, reservation_date = format_oar_date(startdate)) 
+
+    if oargrid_job_id is not None:
+        logger.info('Grid reservation done, oargridjob_id = %s',oargrid_job_id)
+        log = style.log_header('Jobs')
+        jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
+        for job_id, site in jobs:
+            log += '\n'+style.emph(site).ljust(25)+str(job_id).rjust(9)
+        log += '\n'+style.emph('Key file: ')+get_oargrid_job_key(oargrid_job_id)
+        logger.info(log)
+        exit(oargrid_job_id)
+    else:
+        logger.error('Error in performing the reservation ')
+        exit(1)
+else:
+    logger.info('Aborting reservation ...')
+
+
 
 
 
