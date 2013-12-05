@@ -68,6 +68,10 @@ optio.add_argument("-v", "--verbose",
 optinout.add_argument("-p", "--prog", 
                 dest = "prog",     
                 help = "The program to be run when the reservation start")
+optinout.add_argument("--plots",
+                dest = "plots",
+                action = "store_true",
+                help = "Draw a Gantt plot and the slots")
 
 optreservation = parser.add_argument_group(style.host("Reservation"), 
                 "Customize your Grid'5000 reservation.")
@@ -94,10 +98,13 @@ optreservation.add_argument("-k", "--kavlan",
                 action = "store_true",
                 default = False,    
                 help="Ask for a KaVLAN")
-# Subnet option not implemented in new execo_g5k.planning 
-#optreservation.add_argument("-n", "--subnet", 
-#                dest = "subnet",    
-#                help="Ask for a subnet")
+optreservation.add_argument("-n", "--subnet", 
+                dest = "subnet",    
+                help="Ask for subnets")
+#optreservation.add_argument("-d", "--storage", 
+#                dest = "storage",    
+#                help="Ask for storage")
+# Subnet and storage computation not implemented
 optreservation.add_argument("-j", "--job_name", 
                 dest = "job_name", 
                 default = "FUNK",    
@@ -125,7 +132,6 @@ opttime.add_argument("-c", "--charter",
                 default = False,
                 action = "store_true",
                 help = "Avoid charter periods")
-
 args = parser.parse_args()
 
 if args.verbose:
@@ -136,55 +142,100 @@ else:
     logger.setLevel('INFO')
 
 # Printing welcome message
-logger.debug('Options\n'+'\n'.join( [ style.emph(option.ljust(20))+\
-                    '= '+str(value).ljust(10) for option, value in vars(args).iteritems() if value is not None ]))
 logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K --'))
-logger.info('From %s to %s', style.emph(args.startdate), style.emph(args.enddate))
+# Checking options valuers
+logger.debug('Options\n %s', '\n'.join( [ style.emph(option.ljust(20))+\
+                '= '+str(value).ljust(10) for option, value in vars(args).iteritems() if value is not None ]))
 
-logger.info('Walltime: %s', style.emph(args.walltime))
-logger.info('Mode: %s', style.emph(args.mode))
+logger.info('Checking options values')
+
+g5k_elements = ['grid5000'] + sorted(get_g5k_sites() + get_g5k_clusters())
+logger.debug(", ".join( [ style.emph(element) for element in g5k_elements ]) )
 
 if args.prog is not None:
     logger.info('Program: %s', style.emph(args.prog))
-    
-# Creating resources dict from command line options
+# Creating resources dict from command line options resources (-r)
 resources_wanted = {}
 for element in args.resources.split(','):
-    if ':' in element:
-        element_uid, n_nodes = element.split(':')
-    elif args.mode != 'free': 
-        element_uid, n_nodes = element, 0
+    if args.mode == 'free':
+        if not ':' in element:
+            logger.error('You must specify the number of host element:n_nodes when using free mode')
+            exit()
+        else:
+            element_uid, n_nodes = element.split(':')
+            
     else:
-        logger.error('You must specify the number of host element:n_nodes when using free mode')
-        exit()    
-    resources_wanted[element_uid] = int(n_nodes)
+        if ':' in element:
+            logger.warning('You give a resource element:n_nodes corresponding to a '+style.emph('free')+' mode ! ')
+            switch_mode = raw_input('Do you want to switch to free mode (y/[N]): ')
+            if switch_mode == 'y':
+                args.mode = 'free'
+                element_uid, n_nodes = element.split(':')
+            else:
+                logger.warning('The number of nodes specified will be ignored ...')
+                element_uid, n_nodes = element.split(':')[0], 0
+        else:
+            element_uid, n_nodes = element, 0
+            
+    if element_uid in g5k_elements:
+        resources_wanted[element_uid] = int(n_nodes)
+    else:
+        logger.error('%s is not a valid Grid\'5000 resources, you must use of the following elements: %s',
+                     style.report_error(element_uid),", ".join( [ style.emph(element) for element in g5k_elements ]) )
+        exit()
+blacklisted = []    
+if args.blacklist is not None:
+    for element in args.blacklist.split(','):
+        if element in g5k_elements:
+            blacklisted.append(element)
+        else:
+            logger.warning('%s is not a valid Grid\'5000 resources, it will be ignored',
+            style.report_warn(element) )
+# Adding network elements
 if args.kavlan:
     resources_wanted['kavlan'] = 1
-
-# Creating list of blacklisted elements
-if args.blacklist is not None:
-    blacklisted = args.blacklist.split(',')
-else:
-    blacklisted = []
-
-
-show_resources(resources_wanted, 'Wanted resources')
     
-logger.info('Compiling planning for '+'%s',','.join( [style.emph(key) for key in resources_wanted.keys() ] ) )
+if args.subnet:
+    resources_wanted['subnets'] = args.subnet
+    logger.warning('subnet is not implemented in execo_g5k.planning, '+\
+                   'we cannot assure that the requested resources will be availables')
+    subnet = True
+else:
+    subnet = False
+
+#if args.storage:
+#    resources_wanted['storage'] = args.storage
+#    logger.warning('storage is not implemented in execo_g5k.planning, '+\
+#                   'we cannot assure that the requested resources will be availables')
+#    storage = True
+#else:
+#    storage = False
+    
+
+logger.info('From %s to %s', style.emph(args.startdate), style.emph(args.enddate))
+logger.info('Walltime: %s', style.emph(args.walltime))
+logger.info('Mode: %s', style.emph(args.mode))
+show_resources({ resource: n_nodes for resource, n_nodes in resources_wanted.iteritems() },
+                 'Wanted resources')
 
 # Computing the planning of the ressources wanted
-planning = get_planning(elements = resources_wanted.keys(), 
-            excluded_resources = blacklisted,
+logger.info('Compiling planning')
+planning = get_planning(elements = resources_wanted.keys(),
+            excluded_resources = blacklisted, 
             vlan = args.kavlan, 
-            subnet = False, 
+            subnet = subnet, 
             storage = False, 
             out_of_chart = args.charter, 
             starttime = int(oar_date_to_unixts(args.startdate)), 
             endtime = int(oar_date_to_unixts(args.enddate)))
-
+# Determing the slots for the given walltime, i.e. finding the slice of time with constant resources
+logger.info('Calculating slots of %s ', args.walltime)
 slots = compute_slots(planning, args.walltime)
 
-
+if args.plots:
+    logger.info('Drawing plots ')
+    draw_gantt(planning, outfile = "funk_gantt.png")
+    
 # Determine the slot to use
 if args.mode == 'date':
     # In date mode, funk take the first slot available for the wanted walltime
@@ -193,21 +244,25 @@ if args.mode == 'date':
 elif args.mode == 'max':
     # In max mode, funk take the slot available with the maximum number of resources 
     startdate, enddate, resources = find_max_slot( slots, resources_wanted )
-
     
 elif args.mode == 'free':
     # In free mode, funk take the first slot that match your resources    
     startdate, enddate, resources = find_free_slot( slots, resources_wanted )
-    
-
 
 if startdate is None:
     logger.error('Unable to find a slot for your requests.')
     exit()
+else:
+    logger.info('A slot has been found at %s', format_oar_date(startdate))
 
-logger.info(style.log_header('Chosen slot ')+format_oar_date(startdate)+' -> '+format_oar_date(enddate))
 show_resources(resources, 'Resources available')
 
+
+resources = distribute_hosts(resources, resources_wanted, blacklisted)
+show_resources(resources, 'Resources distributed')
+
+
+logger.info(style.log_header('Chosen slot ')+format_oar_date(startdate)+' -> '+format_oar_date(enddate))
 
 if args.ratio:
     for site in get_g5k_sites():
@@ -224,7 +279,6 @@ if args.ratio:
     logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
     show_resources(resources)
 
-
 # Creating the reservation
 oargrid_job_id = create_reservation(startdate,
                                     resources,
@@ -234,17 +288,7 @@ oargrid_job_id = create_reservation(startdate,
                                     prog = args.prog,
                                     name = args.job_name)
 
-
-if oargrid_job_id is None:
-    exit(1)
-else:
-    log = style.log_header('Jobs')
-    jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
-    for job_id, site in jobs:
-        log += '\n'+style.emph(site).ljust(25)+str(job_id).rjust(9)
-    log += '\n'+style.emph('Key file: ')+get_oargrid_job_key(oargrid_job_id)
-    logger.info(log)
-    exit(oargrid_job_id)
+exit(oargrid_job_id)
 
 
 
