@@ -98,9 +98,9 @@ optreservation.add_argument("-k", "--kavlan",
                 action = "store_true",
                 default = False,    
                 help="Ask for a KaVLAN")
-optreservation.add_argument("-n", "--subnet", 
-                dest = "subnet",    
-                help="Ask for subnets")
+#optreservation.add_argument("-n", "--subnet", 
+#                dest = "subnet",    
+#                help="Ask for subnets")
 #optreservation.add_argument("-d", "--storage", 
 #                dest = "storage",    
 #                help="Ask for storage")
@@ -195,14 +195,13 @@ if args.blacklist is not None:
 if args.kavlan:
     resources_wanted['kavlan'] = 1
     
-if args.subnet:
-    resources_wanted['subnets'] = args.subnet
-    logger.warning('subnet is not implemented in execo_g5k.planning, '+\
-                   'we cannot assure that the requested resources will be availables')
-    subnet = True
-else:
-    subnet = False
-
+#if args.subnet:
+#    resources_wanted['subnets'] = args.subnet
+#    logger.warning('subnet is not implemented in execo_g5k.planning, '+\
+#                   'we cannot assure that the requested resources will be availables')
+#    subnet = True
+#else:
+#    subnet = False
 #if args.storage:
 #    resources_wanted['storage'] = args.storage
 #    logger.warning('storage is not implemented in execo_g5k.planning, '+\
@@ -223,7 +222,7 @@ logger.info('Compiling planning')
 planning = get_planning(elements = resources_wanted.keys(),
             excluded_resources = blacklisted, 
             vlan = args.kavlan, 
-            subnet = subnet, 
+            subnet = False, 
             storage = False, 
             out_of_chart = args.charter, 
             starttime = int(oar_date_to_unixts(args.startdate)), 
