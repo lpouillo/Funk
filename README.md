@@ -11,8 +11,10 @@ A Python tool that help you to find ressources for multisites experiments on the
      - free = find the next free slot for a combination of resources, 
      - max  = find the maximum number of nodes for the period specified.
     
-    If no arguments is given, compile the planning of the whole platform and generate an oargridsub command line with all available resources for 1 hour. 
-    Based on execo 2.2, http://execo.gforge.inria.fr/doc/ and the Grid'5000 Job API, https://api.grid5000.fr.
+    If no arguments is given, compile the planning of the whole platform and generate an 
+    oargridsub command line with all available resources for 1 hour. 
+    Based on execo 2.2, http://execo.gforge.inria.fr/doc/, oar 2.5, http://oar.imag.fr 
+    and the Grid'5000 Job API, https://api.grid5000.fr.
     
     General options:
       Define mode and controls I/O.
