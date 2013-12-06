@@ -149,7 +149,7 @@ logger.debug('Options\n %s', '\n'.join( [ style.emph(option.ljust(20))+\
 
 logger.info('Checking options values')
 
-g5k_elements = ['grid5000'] + sorted(get_g5k_sites() + get_g5k_clusters())
+g5k_elements = ['grid5000'] + sorted(get_g5k_sites() + get_g5k_clusters() + get_g5k_hosts())
 logger.debug(", ".join( [ style.emph(element) for element in g5k_elements ]) )
 
 if args.prog is not None:
@@ -219,8 +219,7 @@ show_resources({ resource: n_nodes for resource, n_nodes in resources_wanted.ite
 
 # Computing the planning of the ressources wanted
 logger.info('Compiling planning')
-planning = get_planning(elements = resources_wanted.keys(),
-            excluded_resources = blacklisted, 
+planning = get_planning(elements = resources_wanted.keys(), 
             vlan = args.kavlan, 
             subnet = False, 
             storage = False, 
@@ -229,7 +228,9 @@ planning = get_planning(elements = resources_wanted.keys(),
             endtime = int(oar_date_to_unixts(args.enddate)))
 # Determing the slots for the given walltime, i.e. finding the slice of time with constant resources
 logger.info('Calculating slots of %s ', args.walltime)
-slots = compute_slots(planning, args.walltime)
+
+slots = compute_slots(planning, args.walltime, excluded_resources = blacklisted)
+
 
 if args.plots:
     logger.info('Drawing plots ')
@@ -278,10 +279,7 @@ if args.ratio:
     logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
     show_resources(resources)
 
-
-
-job_specs = get_job_specs(resources, name = args.job_name)
-
+job_specs = get_job_specs(resources, excluded_elements = blacklisted, name = args.job_name)
 
 if args.prog is not None:
     args.oargridsub_opts += ' -p '+args.prog
