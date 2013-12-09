@@ -19,10 +19,12 @@ description = 'This tool helps you to find resources on '+\
     style.host('date')+' = give you the number of nodes available at a given date, \n - '+\
     style.host('free')+' = find the next free slot for a combination of resources, \n - '+\
     style.host('max')+'  = find the maximum number of nodes for the period specified.\n\n'+\
-    'If no arguments is given, compile the planning of the whole platform and generate an '+\
-    'oargridsub command line with all available resources for 1 hour. \n'+\
-    'Based on execo 2.2, '+style.emph('http://execo.gforge.inria.fr/doc/')+' and the Grid\'5000 Job API, '+\
-    style.emph('https://api.grid5000.fr')+'.'
+    """If no arguments is given, compile the planning of the whole platform and generate an 
+    oargridsub command line with all available resources for 1 hour. 
+    Based on execo 2.2, """+style.emph('http://execo.gforge.inria.fr/doc/')+""", 
+    oar 2.5, """+style.emph('http://oar.imag.fr')+""" 
+    and the Grid'5000 Job API, """+style.emph('https://api.grid5000.fr')+'.'
+    
 epilog = style.host('Examples:')+\
     '\nNumber of available nodes on stremi cluster from date to date + walltime \n'+\
     style.command('  %(prog)s -m date -s "'+\
