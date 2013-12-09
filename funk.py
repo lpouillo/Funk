@@ -5,12 +5,16 @@
 #     Created by L. Pouilloux and M. Imbert (INRIA, 2013)
 #
 from argparse import ArgumentParser, RawTextHelpFormatter
-from pprint import pprint, pformat
+from time import time
+from datetime import timedelta
 from execo import logger
 from execo.log import style
-from execo_g5k.oargrid import get_oargrid_job_key, get_oargrid_job_oar_jobs
-from execo_g5k.planning import *
+from execo_g5k.api_utils import get_g5k_sites, get_site_clusters
+from execo_g5k.planning import show_resources, get_planning, compute_slots, draw_gantt, \
+    find_first_slot, find_max_slot, find_free_slot, get_jobs_specs, distribute_hosts
+from execo_g5k.oargrid import get_oargridsub_commandline, get_oargrid_job_oar_jobs, get_oargrid_job_key, oargridsub
 from execo_g5k.oar import oar_duration_to_seconds, format_oar_date, oar_date_to_unixts
+from execo.time_utils import timedelta_to_seconds
 
 # Defining and anlyzing program options 
 prog = 'funk'
@@ -149,11 +153,6 @@ logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K --'))
 logger.debug('Options\n %s', '\n'.join( [ style.emph(option.ljust(20))+\
                 '= '+str(value).ljust(10) for option, value in vars(args).iteritems() if value is not None ]))
 
-logger.info('Checking options values')
-
-g5k_elements = ['grid5000'] + sorted(get_g5k_sites() + get_g5k_clusters() + get_g5k_hosts())
-logger.debug(", ".join( [ style.emph(element) for element in g5k_elements ]) )
-
 if args.prog is not None:
     logger.info('Program: %s', style.emph(args.prog))
 # Creating resources dict from command line options resources (-r)
@@ -178,21 +177,13 @@ for element in args.resources.split(','):
                 element_uid, n_nodes = element.split(':')[0], 0
         else:
             element_uid, n_nodes = element, 0
-            
-    if element_uid in g5k_elements:
-        resources_wanted[element_uid] = int(n_nodes)
-    else:
-        logger.error('%s is not a valid Grid\'5000 resources, you must use of the following elements: %s',
-                     style.report_error(element_uid),", ".join( [ style.emph(element) for element in g5k_elements ]) )
-        exit()
+    resources_wanted[element_uid] = int(n_nodes)
+    
 blacklisted = []    
 if args.blacklist is not None:
-    for element in args.blacklist.split(','):
-        if element in g5k_elements:
-            blacklisted.append(element)
-        else:
-            logger.warning('%s is not a valid Grid\'5000 resources, it will be ignored',
-            style.report_warn(element) )
+    for element in args.blacklist.split(','):    
+        blacklisted.append(element)
+
 # Adding network elements
 if args.kavlan:
     resources_wanted['kavlan'] = 1
@@ -281,7 +272,7 @@ if args.ratio:
     logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
     show_resources(resources)
 
-job_specs = get_job_specs(resources, excluded_elements = blacklisted, name = args.job_name)
+job_specs = get_jobs_specs(resources, excluded_elements = blacklisted, name = args.job_name)
 
 if args.prog is not None:
     args.oargridsub_opts += ' -p '+args.prog
