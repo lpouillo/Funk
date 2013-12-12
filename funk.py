@@ -13,7 +13,7 @@ from execo_g5k.api_utils import get_g5k_sites, get_site_clusters
 from execo_g5k.planning import show_resources, get_planning, compute_slots, draw_gantt, \
     find_first_slot, find_max_slot, find_free_slot, get_jobs_specs, distribute_hosts
 from execo_g5k.oargrid import get_oargridsub_commandline, get_oargrid_job_oar_jobs, get_oargrid_job_key, oargridsub
-from execo_g5k.oar import oar_duration_to_seconds, format_oar_date, oar_date_to_unixts
+from execo_g5k.oar import oar_duration_to_seconds, format_oar_date, oar_date_to_unixts, get_oarsub_commandline, oarsub
 from execo.time_utils import timedelta_to_seconds
 
 # Defining and anlyzing program options 
@@ -97,16 +97,17 @@ optreservation.add_argument("-R", "--ratio",
                 default = None,
                 help = "Apply a given ratio to the resources found, works only for mode date and max")
 optreservation.add_argument("-o", "--oargridsub_opts", 
-                dest = "oargridsub_opts", 
-                help = "Extra options to pass to the oargridsub command line")
+                dest = "submission_opts", 
+                help = "Extra options to pass to the oarsub/oargridsub command line")
 optreservation.add_argument("-k", "--kavlan", 
                 dest = "kavlan", 
                 action = "store_true",
                 default = False,    
                 help="Ask for a KaVLAN")
-#optreservation.add_argument("-n", "--subnet", 
-#                dest = "subnet",    
-#                help="Ask for subnets")
+optreservation.add_argument("-n", "--subnet", 
+                dest = "subnet",    
+                help="Ask for subnets. slash_22=1 will retrieve a /22 subnet on every site of your requests, "+\
+                "but you can specify site1:slash_22=2,site2:slash_19=1")
 #optreservation.add_argument("-d", "--storage", 
 #                dest = "storage",    
 #                help="Ask for storage")
@@ -248,6 +249,7 @@ if startdate is None:
 else:
     logger.info('A slot has been found at %s', format_oar_date(startdate))
 
+
 show_resources(resources, 'Resources available')
 
 
@@ -272,27 +274,60 @@ if args.ratio:
     logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
     show_resources(resources)
 
-job_specs = get_jobs_specs(resources, excluded_elements = blacklisted, name = args.job_name)
+jobs_specs = get_jobs_specs(resources, excluded_elements = blacklisted, name = args.job_name)
+
 
 if args.prog is not None:
-    args.oargridsub_opts += ' -p '+args.prog
+    args.submission_opts += ' -p '+args.prog
+
+if len(jobs_specs) == 1:
+    # If there's only one site, we performe an OAR submission
+    frontend = jobs_specs[0][1]
+    sub = jobs_specs[0][0]
+# FIX A BUG WITH SQL ESCAPE
     
-logger.info('Reservation command: \n\033[1m%s\033[0m',
-get_oargridsub_commandline(job_specs, walltime = args.walltime, 
-         additional_options = args.oargridsub_opts, reservation_date = format_oar_date(startdate)) )
- 
+    _list = sub.resources.split('\\')
+    tmp = _list[:]
+    i_char = 0
+    for char in tmp:
+        if char == '':
+            _list.pop(i_char)
+        else:
+            i_char += 1
+
+    sub.resources = ''.join(_list)
+    
+    sub.walltime = args.walltime
+    sub.additional_options = args.submission_opts
+    sub.reservation_date = format_oar_date(startdate)
+    cmd = get_oarsub_commandline(sub)
+    job_specs = (sub, frontend)
+
+elif len(jobs_specs) > 1:
+    cmd = get_oargridsub_commandline(jobs_specs, walltime = args.walltime, 
+         additional_options = args.submission_opts, reservation_date = format_oar_date(startdate))
+    oar_grid_job_id = None
+
+
+logger.info('Reservation command: \n\033[1m%s\033[0m', cmd)
+
 if args.yes:            
     reservation = 'y'
 else:            
     reservation = raw_input('Do you want me to do the reservation (y/[N]): ')
 
-oargrid_job_id = None
-if reservation in [ 'y', 'Y', 'yes'] :
-    (oargrid_job_id, _) = oargridsub(job_specs, walltime = args.walltime, 
-         additional_options = args.oargridsub_opts, reservation_date = format_oar_date(startdate)) 
 
-    if oargrid_job_id is not None:
-        logger.info('Grid reservation done, oargridjob_id = %s',oargrid_job_id)
+oar_job_id, oar_grid_job_id = None, None
+if reservation in [ 'y', 'Y', 'yes'] :
+    if len(jobs_specs) == 1:
+        (oar_job_id, frontend) = oarsub([job_specs])[0]
+    else:
+        (oargrid_job_id, _) = oargridsub(jobs_specs, walltime = args.walltime, 
+         additional_options = args.submission_opts, reservation_date = format_oar_date(startdate)) 
+    if oar_job_id is not None:
+        logger.info('Reservation done on %s, oar_job_id = %s', style.emph(frontend), oar_job_id)
+    elif oargrid_job_id is not None:
+        logger.info('Grid reservation done, oargrid_job_id = %s',oargrid_job_id)
         log = style.log_header('Jobs')
         jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
         for job_id, site in jobs:
