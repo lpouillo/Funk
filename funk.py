@@ -276,6 +276,24 @@ if args.ratio:
 
 jobs_specs = get_jobs_specs(resources, excluded_elements = blacklisted, name = args.job_name)
 
+if args.subnet:
+    subnets = {}
+    sites_nets = args.subnet.split(',')
+    if len(sites_nets) == 1:
+        subnet_param = args.subnet.split(':')
+        if len(subnet_param) == 1:
+            subnets = {site: subnet_param[0] for site in get_g5k_sites()}
+        else:
+            subnets = {subnet_param[0]: subnet_param[1]}
+    else:
+        for site_param in sites_nets:
+            site, param = site_param.split(':')
+            subnets[site] = param
+    # ADDING THE subnet to resources
+    for OarSubmission, frontend in jobs_specs:
+
+        if subnets.has_key(frontend):
+            OarSubmission.resources = subnets[frontend]+'+'+OarSubmission.resources
 
 if args.prog is not None:
     args.submission_opts += ' -p '+args.prog
