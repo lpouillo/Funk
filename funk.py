@@ -302,19 +302,9 @@ if len(jobs_specs) == 1:
     # If there's only one site, we performe an OAR submission
     frontend = jobs_specs[0][1]
     sub = jobs_specs[0][0]
-# FIX A BUG WITH SQL ESCAPE
-    
-    _list = sub.resources.split('\\')
-    tmp = _list[:]
-    i_char = 0
-    for char in tmp:
-        if char == '':
-            _list.pop(i_char)
-        else:
-            i_char += 1
-
-    sub.resources = ''.join(_list)
-    
+    # WE NEED TO ADAPT THE SQL ESCAPE
+    tmp = str(sub.resources).replace('\\', '')
+    sub.resources = tmp.replace('"', '')
     sub.walltime = args.walltime
     sub.additional_options = args.submission_opts
     sub.reservation_date = format_oar_date(startdate)
@@ -326,7 +316,6 @@ elif len(jobs_specs) > 1:
          additional_options = args.submission_opts, reservation_date = format_oar_date(startdate))
     oar_grid_job_id = None
 
-
 logger.info('Reservation command: \n\033[1m%s\033[0m', cmd)
 
 if args.yes:            
@@ -334,8 +323,7 @@ if args.yes:
 else:            
     reservation = raw_input('Do you want me to do the reservation (y/[N]): ')
 
-
-oar_job_id, oar_grid_job_id = None, None
+oar_job_id, oargrid_job_id = None, None
 if reservation in [ 'y', 'Y', 'yes'] :
     if len(jobs_specs) == 1:
         (oar_job_id, frontend) = oarsub([job_specs])[0]
