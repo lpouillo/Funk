@@ -302,7 +302,7 @@ if len(jobs_specs) == 1:
     # If there's only one site, we performe an OAR submission
     frontend = jobs_specs[0][1]
     sub = jobs_specs[0][0]
-    # WE NEED TO ADAPT THE SQL ESCAPE
+    # WE NEED TO REMOVE THE SQL ESCAPE CHARACTER
     tmp = str(sub.resources).replace('\\', '')
     sub.resources = tmp.replace('"', '')
     sub.walltime = args.walltime
