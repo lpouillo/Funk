@@ -189,13 +189,10 @@ if args.blacklist is not None:
 if args.kavlan:
     resources_wanted['kavlan'] = 1
     
-#if args.subnet:
-#    resources_wanted['subnets'] = args.subnet
-#    logger.warning('subnet is not implemented in execo_g5k.planning, '+\
-#                   'we cannot assure that the requested resources will be availables')
-#    subnet = True
-#else:
-#    subnet = False
+if args.subnet:
+    resources_wanted['subnets'] = args.subnet
+    logger.warning('subnet is not implemented in execo_g5k.planning, '+\
+                   'we cannot assure that the requested resources will be availables')    
 #if args.storage:
 #    resources_wanted['storage'] = args.storage
 #    logger.warning('storage is not implemented in execo_g5k.planning, '+\
