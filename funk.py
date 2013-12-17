@@ -22,7 +22,7 @@ description = 'This tool helps you to find resources on '+\
     style.log_header("Grid'5000")+' platform. It has three modes: \n - '+\
     style.host('date')+' = give you the number of nodes available at a given date, \n - '+\
     style.host('free')+' = find the next free slot for a combination of resources, \n - '+\
-    style.host('max')+'  = find the maximum number of nodes for the period specified.\n\n'+\
+    style.host('max')+'  = find the time slot where the maximum number of nodes are available.\n\n'+\
     """If no arguments is given, compile the planning of the whole platform and generate an 
     oargridsub command line with all available resources for 1 hour. 
     Based on execo 2.2, """+style.emph('http://execo.gforge.inria.fr/doc/')+""", 
@@ -291,7 +291,6 @@ if args.subnet:
             subnets[site] = param
     # ADDING THE subnet to resources
     for OarSubmission, frontend in jobs_specs:
-
         if subnets.has_key(frontend):
             OarSubmission.resources = subnets[frontend]+'+'+OarSubmission.resources
 
@@ -308,7 +307,7 @@ if len(jobs_specs) == 1:
     sub.walltime = args.walltime
     sub.additional_options = args.submission_opts
     sub.reservation_date = format_oar_date(startdate)
-    cmd = get_oarsub_commandline(sub)
+    cmd = style.emph(frontend)+': '+get_oarsub_commandline(sub)
     job_specs = (sub, frontend)
 
 elif len(jobs_specs) > 1:
@@ -317,6 +316,7 @@ elif len(jobs_specs) > 1:
     oar_grid_job_id = None
 
 logger.info('Reservation command: \n\033[1m%s\033[0m', cmd)
+
 
 if args.yes:            
     reservation = 'y'
