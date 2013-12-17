@@ -256,7 +256,7 @@ show_resources(resources, 'Resources distributed')
 
 logger.info(style.log_header('Chosen slot ')+format_oar_date(startdate)+' -> '+format_oar_date(enddate))
 
-if args.ratio:
+if args.ratio and args.mode != 'free':
     for site in get_g5k_sites():
         if site in resources.keys():
             tmp_total_site_nodes = 0
