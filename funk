@@ -11,12 +11,12 @@ from datetime import timedelta
 
 from execo import logger
 from execo.log import style
-from execo_g5k.api_utils import get_g5k_sites, get_site_clusters
+from execo_g5k import get_g5k_sites, get_site_clusters
 from execo_g5k.planning import show_resources, get_planning, compute_slots, draw_gantt, \
     find_first_slot, find_max_slot, find_free_slot, get_jobs_specs, distribute_hosts
 from execo_g5k.oargrid import get_oargridsub_commandline, get_oargrid_job_oar_jobs, get_oargrid_job_key, oargridsub
-from execo_g5k.oar import oar_duration_to_seconds, format_oar_date, oar_date_to_unixts, get_oarsub_commandline, oarsub
-from execo.time_utils import timedelta_to_seconds
+from execo_g5k.oar import get_oarsub_commandline, oarsub, format_oar_date
+from execo.time_utils import timedelta_to_seconds, format_date
 
 # Defining and anlyzing program options 
 prog = 'funk'
@@ -128,12 +128,12 @@ opttime.add_argument("-w", "--walltime",
                     "\ndefault = %(default)s")
 opttime.add_argument("-s", "--startdate", 
                 dest = "startdate", 
-                default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(minutes = 1)))),    
+                default = int(time()+timedelta_to_seconds(timedelta(minutes = 1))),    
                 help = "Starting date in OAR format"+\
                     "\ndefault = %(default)s")
 opttime.add_argument("-e", "--enddate", 
                 dest = "enddate", 
-                default = format_oar_date(int(time()+timedelta_to_seconds(timedelta(weeks = 3, minutes = 1)))),    
+                default = int(time()+timedelta_to_seconds(timedelta(weeks = 3, minutes = 1))),    
                 help = "End date in OAR format"+\
                     "\ndefault = %(default)s")
 opttime.add_argument("-c", "--charter",
@@ -204,7 +204,7 @@ if args.subnet:
 #    storage = False
     
 
-logger.info('From %s to %s', style.emph(args.startdate), style.emph(args.enddate))
+logger.info('From %s to %s', style.emph(format_date(args.startdate)), style.emph(format_date(args.enddate)))
 logger.info('Walltime: %s', style.emph(args.walltime))
 logger.info('Mode: %s', style.emph(args.mode))
 show_resources({ resource: n_nodes for resource, n_nodes in resources_wanted.iteritems() },
@@ -217,12 +217,12 @@ planning = get_planning(elements = resources_wanted.keys(),
             subnet = False, 
             storage = False, 
             out_of_chart = args.charter, 
-            starttime = int(oar_date_to_unixts(args.startdate)), 
-            endtime = int(oar_date_to_unixts(args.enddate)))
+            starttime = args.startdate, 
+            endtime = args.enddate )
 # Determing the slots for the given walltime, i.e. finding the slice of time with constant resources
 logger.info('Calculating slots of %s ', args.walltime)
 
-slots = compute_slots(planning, args.walltime, excluded_resources = blacklisted)
+slots = compute_slots(planning, args.walltime, excluded_elements = blacklisted)
 
 
 if args.plots:
@@ -246,7 +246,7 @@ if startdate is None:
     logger.error('Unable to find a slot for your requests.')
     exit()
 else:
-    logger.info('A slot has been found at %s', format_oar_date(startdate))
+    logger.info('A slot has been found at %s', format_date(startdate))
 
 
 show_resources(resources, 'Resources available')
@@ -256,7 +256,7 @@ resources = distribute_hosts(resources, resources_wanted, blacklisted)
 show_resources(resources, 'Resources distributed')
 
 
-logger.info(style.log_header('Chosen slot ')+format_oar_date(startdate)+' -> '+format_oar_date(enddate))
+logger.info(style.log_header('Chosen slot ')+format_date(startdate)+' -> '+format_date(enddate))
 
 if args.ratio and args.mode != 'free':
     for site in get_g5k_sites():
@@ -305,13 +305,13 @@ if len(jobs_specs) == 1:
     sub.resources = tmp.replace('"', '')
     sub.walltime = args.walltime
     sub.additional_options = args.submission_opts
-    sub.reservation_date = format_oar_date(startdate)
+    sub.reservation_date = startdate
     cmd = style.emph(frontend)+': '+get_oarsub_commandline(sub)
     job_specs = (sub, frontend)
 
 elif len(jobs_specs) > 1:
     cmd = get_oargridsub_commandline(jobs_specs, walltime = args.walltime, 
-         additional_options = args.submission_opts, reservation_date = format_oar_date(startdate))
+         additional_options = args.submission_opts, reservation_date = startdate)
     oar_grid_job_id = None
 
 logger.info('Reservation command: \n\033[1m%s\033[0m', cmd)
@@ -327,7 +327,8 @@ if reservation in [ 'y', 'Y', 'yes'] :
         (oar_job_id, frontend) = oarsub([job_specs])[0]
     else:
         (oargrid_job_id, _) = oargridsub(jobs_specs, walltime = args.walltime, 
-         additional_options = args.submission_opts, reservation_date = format_oar_date(startdate)) 
+         additional_options = args.submission_opts, 
+         reservation_date = startdate) 
     if oar_job_id is not None:
         logger.info('Reservation done on %s, oar_job_id = %s', style.emph(frontend), oar_job_id)
     elif oargrid_job_id is not None:
