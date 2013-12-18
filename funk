@@ -4,9 +4,16 @@
 #    Funk: (F)ind (U)r (N)odes on G5(K)
 #     Created by L. Pouilloux and M. Imbert (INRIA, 2013)
 #
+from sys import path
 from argparse import ArgumentParser, RawTextHelpFormatter
 from time import time
 from datetime import timedelta
+
+try:
+    import execo
+except:
+    path.append('/home/lpouilloux/.local/lib/python2.7/site-packages')
+
 from execo import logger
 from execo.log import style
 from execo_g5k.api_utils import get_g5k_sites, get_site_clusters
