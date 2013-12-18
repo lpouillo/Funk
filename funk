@@ -9,11 +9,6 @@ from argparse import ArgumentParser, RawTextHelpFormatter
 from time import time
 from datetime import timedelta
 
-try:
-    import execo
-except:
-    path.append('/home/lpouilloux/.local/lib/python2.7/site-packages')
-
 from execo import logger
 from execo.log import style
 from execo_g5k.api_utils import get_g5k_sites, get_site_clusters
@@ -320,7 +315,6 @@ elif len(jobs_specs) > 1:
     oar_grid_job_id = None
 
 logger.info('Reservation command: \n\033[1m%s\033[0m', cmd)
-
 
 if args.yes:            
     reservation = 'y'
