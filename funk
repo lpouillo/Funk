@@ -109,7 +109,7 @@ optreservation.add_argument("-k", "--kavlan",
 optreservation.add_argument("-n", "--subnet", 
                 dest = "subnet",    
                 help="Ask for subnets. slash_22=1 will retrieve a /22 subnet on every site of your requests, "+\
-                "but you can specify site1:slash_22=2,site2:slash_19=1")
+                "\nbut you can specify site1:slash_22=2,site2:slash_19=1")
 #optreservation.add_argument("-d", "--storage", 
 #                dest = "storage",    
 #                help="Ask for storage")
