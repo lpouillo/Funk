@@ -119,6 +119,16 @@ optreservation.add_argument("-j", "--job_name",
                 default = "FUNK",    
                 help="The job name passed to the OAR subjobs"+\
                     "\ndefault = %(default)s")
+optgrid = optreservation.add_mutually_exclusive_group()
+optgrid.add_argument("--no-oargrid", 
+                dest = "no_oargrid", 
+                action = "store_true",    
+                help = "Don't use oargridsub and perform parallel oar reservations")
+optgrid.add_argument("--force-oargrid", 
+                dest = "force_oargrid", 
+                action = "store_true",    
+                help = "Force the usage of oargrisub, even if there only one site involved")
+
 
 opttime= parser.add_argument_group(style.host("Time"), "Define options related to date and time.")
 opttime.add_argument("-w", "--walltime", 
@@ -296,23 +306,21 @@ if args.subnet:
 if args.prog is not None:
     args.submission_opts += ' -p '+args.prog
 
-if len(jobs_specs) == 1:
-    # If there's only one site, we performe an OAR submission
-    frontend = jobs_specs[0][1]
-    sub = jobs_specs[0][0]
-    # WE NEED TO REMOVE THE SQL ESCAPE CHARACTER
-    tmp = str(sub.resources).replace('\\', '')
-    sub.resources = tmp.replace('"', '')
-    sub.walltime = args.walltime
-    sub.additional_options = args.submission_opts
-    sub.reservation_date = startdate
-    cmd = style.emph(frontend)+': '+get_oarsub_commandline(sub)
-    job_specs = (sub, frontend)
-
-elif len(jobs_specs) > 1:
+if args.no_oargrid or (len(jobs_specs) == 1 and not args.force_oargrid):
+    cmd = ''
+    for sub, frontend in jobs_specs:
+        # WE NEED TO REMOVE THE SQL ESCAPE CHARACTER
+        tmp = str(sub.resources).replace('\\', '')
+        sub.resources = tmp.replace('"', '')
+        sub.walltime = args.walltime
+        sub.additional_options = args.submission_opts
+        sub.reservation_date = startdate
+        cmd += style.emph(frontend)+': '+get_oarsub_commandline(sub)+'\n'
+        job_specs = (sub, frontend)
+else:
     cmd = get_oargridsub_commandline(jobs_specs, walltime = args.walltime, 
          additional_options = args.submission_opts, reservation_date = startdate)
-    oar_grid_job_id = None
+    
 
 logger.info('Reservation command: \n\033[1m%s\033[0m', cmd)
 
@@ -323,26 +331,26 @@ else:
 
 oar_job_id, oargrid_job_id = None, None
 if reservation in [ 'y', 'Y', 'yes'] :
-    if len(jobs_specs) == 1:
-        (oar_job_id, frontend) = oarsub([job_specs])[0]
+    if args.no_oargrid or (len(jobs_specs) == 1 and not args.force_oargrid):
+        jobs = oarsub(jobs_specs)
+        for job in jobs:
+            logger.info('Reservation done on %s, oar_job_id = %s', style.emph(job[1]), job[0])
     else:
         (oargrid_job_id, _) = oargridsub(jobs_specs, walltime = args.walltime, 
          additional_options = args.submission_opts, 
          reservation_date = startdate) 
-    if oar_job_id is not None:
-        logger.info('Reservation done on %s, oar_job_id = %s', style.emph(frontend), oar_job_id)
-    elif oargrid_job_id is not None:
-        logger.info('Grid reservation done, oargrid_job_id = %s',oargrid_job_id)
-        log = style.log_header('Jobs')
-        jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
-        for job_id, site in jobs:
-            log += '\n'+style.emph(site).ljust(25)+str(job_id).rjust(9)
-        log += '\n'+style.emph('Key file: ')+get_oargrid_job_key(oargrid_job_id)
-        logger.info(log)
-        exit(oargrid_job_id)
-    else:
-        logger.error('Error in performing the reservation ')
-        exit(1)
+        if oargrid_job_id is not None:
+            logger.info('Grid reservation done, oargrid_job_id = %s',oargrid_job_id)
+            log = style.log_header('Jobs')
+            jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
+            for job_id, site in jobs:
+                log += '\n'+style.emph(site).ljust(25)+str(job_id).rjust(9)
+            log += '\n'+style.emph('Key file: ')+get_oargrid_job_key(oargrid_job_id)
+            logger.info(log)
+            exit(oargrid_job_id)
+        else:
+            logger.error('Error in performing the reservation ')
+            exit(1)
 else:
     logger.info('Aborting reservation ...')
 
