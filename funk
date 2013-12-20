@@ -48,12 +48,15 @@ parser = ArgumentParser( prog = prog,
                          epilog = epilog, 
                          formatter_class = RawTextHelpFormatter,
                          add_help = False)
-parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+
 optinout = parser.add_argument_group( style.host("General options"),
                 "Define mode and controls I/O.")
 optinout.add_argument("-h", "--help", 
                 action = "help", 
                 help = "show this help message and exit")
+optinout.add_argument('--version', 
+                action='version', 
+                version='%(prog)s 1.0')
 optinout.add_argument("-m", "--mode",
                 dest = "mode", 
                 default = 'date',
