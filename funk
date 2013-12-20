@@ -48,7 +48,7 @@ parser = ArgumentParser( prog = prog,
                          epilog = epilog, 
                          formatter_class = RawTextHelpFormatter,
                          add_help = False)
-
+parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 optinout = parser.add_argument_group( style.host("General options"),
                 "Define mode and controls I/O.")
 optinout.add_argument("-h", "--help", 
