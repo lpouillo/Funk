@@ -101,7 +101,7 @@ optreservation.add_argument("-R", "--ratio",
                 type = float,
                 default = None,
                 help = "Apply a given ratio to the resources found, works only for mode date and max")
-optreservation.add_argument("-o", "--oargridsub_opts", 
+optreservation.add_argument("-o", "--submission_opts", 
                 dest = "submission_opts", 
                 default = "",
                 help = "Extra options to pass to the oarsub/oargridsub command line")
