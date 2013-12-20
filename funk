@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 #    
 #    Funk: (F)ind (U)r (N)odes on G5(K)
 #     Created by L. Pouilloux and M. Imbert (INRIA, 2013)
+#
+#    Developped 
 #
 from sys import path
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -100,6 +103,7 @@ optreservation.add_argument("-R", "--ratio",
                 help = "Apply a given ratio to the resources found, works only for mode date and max")
 optreservation.add_argument("-o", "--oargridsub_opts", 
                 dest = "submission_opts", 
+                default = "",
                 help = "Extra options to pass to the oarsub/oargridsub command line")
 optreservation.add_argument("-k", "--kavlan", 
                 dest = "kavlan", 
