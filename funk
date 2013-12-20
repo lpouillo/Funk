@@ -7,14 +7,13 @@
 #
 #    Developped 
 #
-from sys import path
 from argparse import ArgumentParser, RawTextHelpFormatter
 from time import time
 from datetime import timedelta
-
+from math import floor
 from execo import logger
 from execo.log import style
-from execo_g5k import get_g5k_sites, get_site_clusters
+from execo_g5k import get_g5k_sites
 from execo_g5k.planning import show_resources, get_planning, compute_slots, draw_gantt, \
     find_first_slot, find_max_slot, find_free_slot, get_jobs_specs, distribute_hosts
 from execo_g5k.oargrid import get_oargridsub_commandline, get_oargrid_job_oar_jobs, get_oargrid_job_key, oargridsub
@@ -269,21 +268,10 @@ show_resources(resources, 'Resources available')
 resources = distribute_hosts(resources, resources_wanted, blacklisted)
 show_resources(resources, 'Resources distributed')
 
-
 logger.info(style.log_header('Chosen slot ')+format_date(startdate)+' -> '+format_date(enddate))
 
 if args.ratio and args.mode != 'free':
-    for site in get_g5k_sites():
-        if site in resources.keys():
-            tmp_total_site_nodes = 0
-            for cluster in get_site_clusters(site):
-                if cluster in resources.keys(): 
-                    resources[cluster] = int(resources[cluster] * args.ratio)
-                    tmp_total_site_nodes += resources[cluster]
-            if resources_wanted.has_key(site):
-                resources[site] = int(resources_wanted[site] * args.ratio)
-            else:
-                resources[site] = tmp_total_site_nodes
+    resources.update((x, int(floor(y*args.ratio))) for x, y in resources.items())
     logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
     show_resources(resources)
 
