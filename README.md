@@ -22,6 +22,7 @@ Version 1.0 is installed on Grid'5000 frontends. See https://www.grid5000.fr/med
       Define mode and controls I/O.
     
       -h, --help            show this help message and exit
+      --version             show program's version number and exit
       -m MODE, --mode MODE  Setup the mode: date, free or max 
                             default = date
       -y, --yes             Perform the reservation automatically
