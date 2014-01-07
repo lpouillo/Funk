@@ -329,8 +329,11 @@ if reservation in [ 'y', 'Y', 'yes'] :
     if args.no_oargrid or (len(jobs_specs) == 1 and not args.force_oargrid):
         jobs = oarsub(jobs_specs)
         for job in jobs:
-            logger.info('Reservation done on %s, oar_job_id = %s', style.emph(job[1]), job[0])
-    else:
+            if job[0] is not None:
+                logger.info('Reservation done on %s, oar_job_id = %s', style.emph(job[1]), job[0])
+            else:
+                logger.error('Error in performing the reservation on site %s', style.emph(job[1]))
+    else:       
         (oargrid_job_id, _) = oargridsub(jobs_specs, walltime = args.walltime, 
          additional_options = args.submission_opts, 
          reservation_date = startdate) 
