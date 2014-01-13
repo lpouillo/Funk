@@ -240,11 +240,19 @@ logger.info('Calculating slots of %s ', args.walltime)
 
 slots = compute_slots(planning, args.walltime, excluded_elements = blacklisted)
 
-
 if args.plots:
-    logger.info('Drawing plots ')
-    draw_gantt(planning, outfile = "funk_gantt.png")
-    draw_slots(slots, outfile = "funk_slots.png")
+    try: 
+        import matplotlib as MPL
+        logger.info('Drawing plots ')
+        draw_gantt(planning, outfile = "funk_gantt.png")
+    
+        if MPL.__version__ < '1.2.0':
+            logger.warning('Slots drawing use stackplot that requires matlplotlib >= 1.2.0')
+        else:
+            draw_slots(slots, outfile = "funk_slots.png") 
+    except:
+        logger.warning('No matplotlib package detected, plots cannot be created')
+        pass
     
 # Determine the slot to use
 if args.mode == 'date':
