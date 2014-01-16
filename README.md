@@ -2,7 +2,9 @@ Funk
 ====
 A Python tool to help you to find ressources on the Grid5000 platform.
 
-Version 1.0 is installed on Grid'5000 frontends. See https://www.grid5000.fr/mediawiki/index.php/Funk
+Developped by the Inria Hemera initiative 2010-2014 
+
+https://www.grid5000.fr/mediawiki/index.php/Hemera
     
     usage: funk [-h] [-m MODE] [-y] [-q | -v] [-p PROG] [-r RESOURCES]
                 [-b BLACKLIST] [-R RATIO] [-o OARGRIDSUB_OPTS] [-k] [-j JOB_NAME]
