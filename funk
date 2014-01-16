@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#    
+#
 #    Funk: (F)ind (U)r (N)odes on G5(K)
 #     Created by L. Pouilloux and M. Imbert (INRIA, 2013)
 #
-#    Developped 
+#    Developped
 #
 from argparse import ArgumentParser, RawTextHelpFormatter
 from time import time
@@ -20,19 +20,19 @@ from execo_g5k.oargrid import get_oargridsub_commandline, get_oargrid_job_oar_jo
 from execo_g5k.oar import get_oarsub_commandline, oarsub, format_oar_date
 from execo.time_utils import timedelta_to_seconds, format_date
 
-# Defining and anlyzing program options 
+# Defining and anlyzing program options
 prog = 'funk'
 description = 'This tool helps you to find resources on '+\
     style.log_header("Grid'5000")+' platform. It has three modes: \n - '+\
     style.host('date')+' = give you the number of nodes available at a given date, \n - '+\
     style.host('free')+' = find the next free slot for a combination of resources, \n - '+\
     style.host('max')+'  = find the time slot where the maximum number of nodes are available.\n\n'+\
-    """If no arguments is given, compile the planning of the whole platform and generate an 
-    oargridsub command line with all available resources for 1 hour. 
-    Based on execo 2.2, """+style.emph('http://execo.gforge.inria.fr/doc/')+""", 
-    oar 2.5, """+style.emph('http://oar.imag.fr')+""" 
+    """If no arguments is given, compile the planning of the whole platform and generate an
+    oargridsub command line with all available resources for 1 hour.
+    Based on execo 2.2, """+style.emph('http://execo.gforge.inria.fr/doc/')+""",
+    oar 2.5, """+style.emph('http://oar.imag.fr')+"""
     and the Grid'5000 Job API, """+style.emph('https://api.grid5000.fr')+'.'
-    
+
 epilog = style.host('Examples:')+\
     '\nNumber of available nodes on stremi cluster from date to date + walltime \n'+\
     style.command('  %(prog)s -m date -s "'+\
@@ -43,113 +43,113 @@ epilog = style.host('Examples:')+\
     style.command('  %(prog)s -m max -w 10:00:00 -r nancy,paradent,edel -c \n')+\
     'Issues/features requests can be reported to '+style.emph('https://github.com/lpouillo/Funk')
 
-parser = ArgumentParser( prog = prog, 
-                         description = description, 
-                         epilog = epilog, 
+parser = ArgumentParser( prog = prog,
+                         description = description,
+                         epilog = epilog,
                          formatter_class = RawTextHelpFormatter,
                          add_help = False)
 
 optinout = parser.add_argument_group( style.host("General options"),
                 "Define mode and controls I/O.")
-optinout.add_argument("-h", "--help", 
-                action = "help", 
+optinout.add_argument("-h", "--help",
+                action = "help",
                 help = "show this help message and exit")
-optinout.add_argument('--version', 
-                action='version', 
+optinout.add_argument('--version',
+                action='version',
                 version='%(prog)s 1.0')
 optinout.add_argument("-m", "--mode",
-                dest = "mode", 
+                dest = "mode",
                 default = 'date',
                 help = "Setup the mode: date, free or max "+\
                     "\ndefault = %(default)s")
 optinout.add_argument("-y", "--yes",
-                action = "store_true", 
-                dest = "yes", 
+                action = "store_true",
+                dest = "yes",
                 default = False,
                 help = "Perform the reservation automatically")
 optio = optinout.add_mutually_exclusive_group()
-optio.add_argument("-q", "--quiet", 
+optio.add_argument("-q", "--quiet",
                 dest = "quiet",
-                action = "store_true", 
-                default = False,    
+                action = "store_true",
+                default = False,
                 help = "Run without printing anything")
-optio.add_argument("-v", "--verbose", 
+optio.add_argument("-v", "--verbose",
                 dest = "verbose",
-                action = "store_true", 
-                default = False,    
+                action = "store_true",
+                default = False,
                 help = "Run in verbose mode")
-optinout.add_argument("-p", "--prog", 
-                dest = "prog",     
+optinout.add_argument("-p", "--prog",
+                dest = "prog",
                 help = "The program to be run when the reservation start")
 optinout.add_argument("--plots",
                 dest = "plots",
                 action = "store_true",
                 help = "Draw a Gantt plot and the slots")
 
-optreservation = parser.add_argument_group(style.host("Reservation"), 
+optreservation = parser.add_argument_group(style.host("Reservation"),
                 "Customize your Grid'5000 reservation.")
-optreservation.add_argument("-r", "--resources", 
-                dest="resources", 
+optreservation.add_argument("-r", "--resources",
+                dest="resources",
                 default = "grid5000",
                 help = "Comma separated list of Grid'5000 elements (grid5000, site or cluster)"\
                     "\n-r element1,element2 for date and max modes"+\
                     "\n-r element1:n_nodes1,element2:n_nodes2 for free mode"+\
                     "\ndefault = %(default)s")
-optreservation.add_argument("-b", "--blacklist", 
-                dest = "blacklist", 
+optreservation.add_argument("-b", "--blacklist",
+                dest = "blacklist",
                 help = "Remove clusters from planning computation")
 optreservation.add_argument("-R", "--ratio",
                 dest = "ratio",
                 type = float,
                 default = None,
                 help = "Apply a given ratio to the resources found, works only for mode date and max")
-optreservation.add_argument("-o", "--submission_opts", 
-                dest = "submission_opts", 
+optreservation.add_argument("-o", "--submission_opts",
+                dest = "submission_opts",
                 default = "",
                 help = "Extra options to pass to the oarsub/oargridsub command line")
-optreservation.add_argument("-k", "--kavlan", 
-                dest = "kavlan", 
+optreservation.add_argument("-k", "--kavlan",
+                dest = "kavlan",
                 action = "store_true",
-                default = False,    
+                default = False,
                 help="Ask for a KaVLAN")
-optreservation.add_argument("-n", "--subnet", 
-                dest = "subnet",    
+optreservation.add_argument("-n", "--subnet",
+                dest = "subnet",
                 help="Ask for subnets. slash_22=1 will retrieve a /22 subnet on every site of your requests, "+\
                 "\nbut you can specify site1:slash_22=2,site2:slash_19=1")
-#optreservation.add_argument("-d", "--storage", 
-#                dest = "storage",    
+#optreservation.add_argument("-d", "--storage",
+#                dest = "storage",
 #                help="Ask for storage")
 # Subnet and storage computation not implemented
-optreservation.add_argument("-j", "--job_name", 
-                dest = "job_name", 
-                default = "FUNK",    
+optreservation.add_argument("-j", "--job_name",
+                dest = "job_name",
+                default = "FUNK",
                 help="The job name passed to the OAR subjobs"+\
                     "\ndefault = %(default)s")
 optgrid = optreservation.add_mutually_exclusive_group()
-optgrid.add_argument("--no-oargrid", 
-                dest = "no_oargrid", 
-                action = "store_true",    
+optgrid.add_argument("--no-oargrid",
+                dest = "no_oargrid",
+                action = "store_true",
                 help = "Don't use oargridsub and perform parallel oar reservations")
-optgrid.add_argument("--force-oargrid", 
-                dest = "force_oargrid", 
-                action = "store_true",    
+optgrid.add_argument("--force-oargrid",
+                dest = "force_oargrid",
+                action = "store_true",
                 help = "Force the usage of oargrisub, even if there only one site involved")
 
 
 opttime= parser.add_argument_group(style.host("Time"), "Define options related to date and time.")
-opttime.add_argument("-w", "--walltime", 
-                dest = "walltime", 
-                default = '1:00:00',    
+opttime.add_argument("-w", "--walltime",
+                dest = "walltime",
+                default = '1:00:00',
                 help = "Reservation walltime in OAR format"+\
                     "\ndefault = %(default)s")
-opttime.add_argument("-s", "--startdate", 
-                dest = "startdate", 
-                default = int(time()+timedelta_to_seconds(timedelta(minutes = 1))),    
+opttime.add_argument("-s", "--startdate",
+                dest = "startdate",
+                default = int(time()+timedelta_to_seconds(timedelta(minutes = 1))),
                 help = "Starting date in OAR format"+\
                     "\ndefault = %(default)s")
-opttime.add_argument("-e", "--enddate", 
-                dest = "enddate", 
-                default = int(time()+timedelta_to_seconds(timedelta(weeks = 3, minutes = 1))),    
+opttime.add_argument("-e", "--enddate",
+                dest = "enddate",
+                default = int(time()+timedelta_to_seconds(timedelta(weeks = 3, minutes = 1))),
                 help = "End date in OAR format"+\
                     "\ndefault = %(default)s")
 opttime.add_argument("-c", "--charter",
@@ -183,7 +183,7 @@ for element in args.resources.split(','):
             exit()
         else:
             element_uid, n_nodes = element.split(':')
-            
+
     else:
         if ':' in element:
             logger.warning('You give a resource element:n_nodes corresponding to a '+style.emph('free')+' mode ! ')
@@ -197,20 +197,20 @@ for element in args.resources.split(','):
         else:
             element_uid, n_nodes = element, 0
     resources_wanted[element_uid] = int(n_nodes)
-    
-blacklisted = []    
+
+blacklisted = []
 if args.blacklist is not None:
-    for element in args.blacklist.split(','):    
+    for element in args.blacklist.split(','):
         blacklisted.append(element)
 
 # Adding network elements
 if args.kavlan:
     resources_wanted['kavlan'] = 1
-    
+
 if args.subnet:
     resources_wanted['subnets'] = args.subnet
     logger.warning('subnet is not implemented in execo_g5k.planning, '+\
-                   'we cannot assure that the requested resources will be availables')    
+                   'we cannot assure that the requested resources will be availables')
 #if args.storage:
 #    resources_wanted['storage'] = args.storage
 #    logger.warning('storage is not implemented in execo_g5k.planning, '+\
@@ -218,7 +218,7 @@ if args.subnet:
 #    storage = True
 #else:
 #    storage = False
-    
+
 
 logger.info('From %s to %s', style.emph(format_date(args.startdate)), style.emph(format_date(args.enddate)))
 logger.info('Walltime: %s', style.emph(args.walltime))
@@ -228,12 +228,12 @@ show_resources({ resource: n_nodes for resource, n_nodes in resources_wanted.ite
 
 # Computing the planning of the ressources wanted
 logger.info('Compiling planning')
-planning = get_planning(elements = resources_wanted.keys(), 
-            vlan = args.kavlan, 
-            subnet = False, 
-            storage = False, 
-            out_of_chart = args.charter, 
-            starttime = args.startdate, 
+planning = get_planning(elements = resources_wanted.keys(),
+            vlan = args.kavlan,
+            subnet = False,
+            storage = False,
+            out_of_chart = args.charter,
+            starttime = args.startdate,
             endtime = args.enddate )
 # Determing the slots for the given walltime, i.e. finding the slice of time with constant resources
 logger.info('Calculating slots of %s ', args.walltime)
@@ -241,30 +241,30 @@ logger.info('Calculating slots of %s ', args.walltime)
 slots = compute_slots(planning, args.walltime, excluded_elements = blacklisted)
 
 if args.plots:
-    try: 
+    try:
         import matplotlib as MPL
         logger.info('Drawing plots ')
         draw_gantt(planning, outfile = "funk_gantt.png")
-    
+
         if MPL.__version__ < '1.2.0':
             logger.warning('Slots drawing use stackplot that requires matlplotlib >= 1.2.0')
         else:
-            draw_slots(slots, outfile = "funk_slots.png") 
+            draw_slots(slots, outfile = "funk_slots.png")
     except:
         logger.warning('No matplotlib package detected, plots cannot be created')
         pass
-    
+
 # Determine the slot to use
 if args.mode == 'date':
     # In date mode, funk take the first slot available for the wanted walltime
     startdate, enddate, resources = find_first_slot( slots, resources_wanted )
 
 elif args.mode == 'max':
-    # In max mode, funk take the slot available with the maximum number of resources 
+    # In max mode, funk take the slot available with the maximum number of resources
     startdate, enddate, resources = find_max_slot( slots, resources_wanted )
-    
+
 elif args.mode == 'free':
-    # In free mode, funk take the first slot that match your resources    
+    # In free mode, funk take the first slot that match your resources
     startdate, enddate, resources = find_free_slot( slots, resources_wanted )
 
 if startdate is None:
@@ -322,15 +322,15 @@ if args.no_oargrid or (len(jobs_specs) == 1 and not args.force_oargrid):
         cmd += style.emph(frontend)+': '+get_oarsub_commandline(sub)+'\n'
         job_specs = (sub, frontend)
 else:
-    cmd = get_oargridsub_commandline(jobs_specs, walltime = args.walltime, 
+    cmd = get_oargridsub_commandline(jobs_specs, walltime = args.walltime,
          additional_options = args.submission_opts, reservation_date = startdate)
-    
+
 
 logger.info('Reservation command: \n\033[1m%s\033[0m', cmd)
 
-if args.yes:            
+if args.yes:
     reservation = 'y'
-else:            
+else:
     reservation = raw_input('Do you want me to do the reservation (y/[N]): ')
 
 oar_job_id, oargrid_job_id = None, None
@@ -339,13 +339,13 @@ if reservation in [ 'y', 'Y', 'yes'] :
         jobs = oarsub(jobs_specs)
         for job in jobs:
             if job[0] is not None:
-                logger.info('Reservation done on %s, oar_job_id = %s', style.emph(job[1]), job[0])
+                logger.info('Reservation done on %s:%s', style.emph(job[1]), job[0])
             else:
                 logger.error('Error in performing the reservation on site %s', style.emph(job[1]))
-    else:       
-        (oargrid_job_id, _) = oargridsub(jobs_specs, walltime = args.walltime, 
-         additional_options = args.submission_opts, 
-         reservation_date = startdate) 
+    else:
+        (oargrid_job_id, _) = oargridsub(jobs_specs, walltime = args.walltime,
+         additional_options = args.submission_opts,
+         reservation_date = startdate)
         if oargrid_job_id is not None:
             logger.info('Grid reservation done, oargrid_job_id = %s',oargrid_job_id)
             log = style.log_header('Jobs')
@@ -365,5 +365,5 @@ else:
 
 
 
-    
-    
+
+
