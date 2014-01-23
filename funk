@@ -102,7 +102,7 @@ optreservation.add_argument("-R", "--ratio",
                 dest = "ratio",
                 type = float,
                 default = None,
-                help = "Apply a given ratio to the resources found, works only for mode date and max")
+                help = "Apply a given ratio to the host resources")
 optreservation.add_argument("-o", "--submission_opts",
                 dest = "submission_opts",
                 default = "",
