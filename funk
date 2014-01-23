@@ -277,15 +277,10 @@ else:
 show_resources(resources, 'Resources available')
 
 
-resources = distribute_hosts(resources, resources_wanted, blacklisted)
+resources = distribute_hosts(resources, resources_wanted, blacklisted, args.ratio)
 show_resources(resources, 'Resources distributed')
 
 logger.info(style.log_header('Chosen slot ')+format_date(startdate)+' -> '+format_date(enddate))
-
-if args.ratio and args.mode != 'free':
-    resources.update((x, int(floor(y*args.ratio))) for x, y in resources.items())
-    logger.info("After applying ratio %f, actual resources reserved:" % (args.ratio,))
-    show_resources(resources)
 
 jobs_specs = get_jobs_specs(resources, excluded_elements = blacklisted, name = args.job_name)
 
