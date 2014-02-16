@@ -278,7 +278,7 @@ show_resources(resources, 'Resources available')
 
 
 resources = distribute_hosts(resources, resources_wanted, blacklisted, args.ratio)
-show_resources(resources, 'Resources distributed')
+show_resources(resources, 'Resources selected')
 
 logger.info(style.log_header('Chosen slot ')+format_date(startdate)+' -> '+format_date(enddate))
 
