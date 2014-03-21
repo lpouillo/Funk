@@ -10,31 +10,32 @@
 from argparse import ArgumentParser, RawTextHelpFormatter
 from time import time
 from datetime import timedelta
-from math import floor
 from execo import logger
 from execo.log import style
 from execo_g5k import get_g5k_sites
-from execo_g5k.planning import show_resources, get_planning, compute_slots, draw_gantt, draw_slots,\
-    find_first_slot, find_max_slot, find_free_slot, get_jobs_specs, distribute_hosts
-from execo_g5k.oargrid import get_oargridsub_commandline, get_oargrid_job_oar_jobs, get_oargrid_job_key, oargridsub
+from execo_g5k.planning import show_resources, get_planning, compute_slots, \
+    draw_gantt, draw_slots, find_first_slot, find_max_slot, find_free_slot, \
+    get_jobs_specs, distribute_hosts
+from execo_g5k.oargrid import get_oargridsub_commandline, \
+    get_oargrid_job_oar_jobs, get_oargrid_job_key, oargridsub
 from execo_g5k.oar import get_oarsub_commandline, oarsub, format_oar_date
 from execo.time_utils import timedelta_to_seconds, format_date
 
 # Defining and anlyzing program options
 prog = 'funk'
-description = 'This tool helps you to find resources on '+\
-    style.log_header("Grid'5000")+' platform. It has three modes: \n - '+\
-    style.host('date')+' = give you the number of nodes available at a given date, \n - '+\
-    style.host('free')+' = find the next free slot for a combination of resources, \n - '+\
-    style.host('max')+'  = find the time slot where the maximum number of nodes are available.\n\n'+\
+description = 'This tool helps you to find resources on ' + \
+    style.log_header("Grid'5000")+' platform. It has three modes: \n - ' + \
+    style.host('date') + ' = give you the number of nodes available at a given date, \n - ' + \
+    style.host('free') + ' = find the next free slot for a combination of resources, \n - ' + \
+    style.host('max') + '  = find the time slot where the maximum number of nodes are available.\n\n' + \
     """If no arguments is given, compile the planning of the whole platform and generate an
     oargridsub command line with all available resources for 1 hour.
-    Based on execo 2.2, """+style.emph('http://execo.gforge.inria.fr/doc/')+""",
-    oar 2.5, """+style.emph('http://oar.imag.fr')+"""
-    and the Grid'5000 Job API, """+style.emph('https://api.grid5000.fr')+'.'
+    Based on execo 2.2, """ + style.emph('http://execo.gforge.inria.fr/doc/') + """,
+    oar 2.5, """ + style.emph('http://oar.imag.fr') + """
+    and the Grid'5000 Job API, """ + style.emph('https://api.grid5000.fr') + '.'
 
-epilog = style.host('Examples:')+\
-    '\nNumber of available nodes on stremi cluster from date to date + walltime \n'+\
+epilog = style.host('Examples:') + \
+    '\nNumber of available nodes on stremi cluster from date to date + walltime \n' + \
     style.command('  %(prog)s -m date -s "'+\
     format_oar_date(int(time()+timedelta_to_seconds(timedelta( minutes = 1))))+'" -r stremi\n')+\
     'First free slots for a resource combination with deploy job type and a KaVLAN\n'+\
@@ -209,7 +210,7 @@ if args.kavlan:
 
 if args.subnet:
     resources_wanted['subnets'] = args.subnet
-    logger.warning('subnet is not implemented in execo_g5k.planning, '+\
+    logger.warning('subnet is not implemented in execo_g5k.planning, ' + \
                    'we cannot assure that the requested resources will be availables')
 #if args.storage:
 #    resources_wanted['storage'] = args.storage
@@ -299,11 +300,12 @@ if args.subnet:
             subnets[site] = param
     # ADDING THE subnet to resources
     for OarSubmission, frontend in jobs_specs:
-        if subnets.has_key(frontend):
-            OarSubmission.resources = subnets[frontend]+'+'+OarSubmission.resources
+        if frontend in subnets:
+            OarSubmission.resources = subnets[frontend] + \
+                '+' + OarSubmission.resources
 
 if args.prog is not None:
-    args.submission_opts += ' -p '+args.prog
+    args.submission_opts += ' -p ' + args.prog
 
 if args.no_oargrid or (len(jobs_specs) == 1 and not args.force_oargrid):
     cmd = ''
@@ -311,11 +313,11 @@ if args.no_oargrid or (len(jobs_specs) == 1 and not args.force_oargrid):
         sub.walltime = args.walltime
         sub.additional_options = args.submission_opts
         sub.reservation_date = startdate
-        cmd += style.emph(frontend)+': '+get_oarsub_commandline(sub)+'\n'
+        cmd += style.emph(frontend) + ': ' + get_oarsub_commandline(sub) + '\n'
         job_specs = (sub, frontend)
 else:
-    cmd = get_oargridsub_commandline(jobs_specs, walltime = args.walltime,
-         additional_options = args.submission_opts, reservation_date = startdate)
+    cmd = get_oargridsub_commandline(jobs_specs, walltime=args.walltime,
+         additional_options=args.submission_opts, reservation_date=startdate)
 
 
 logger.info('Reservation command: \n\033[1m%s\033[0m', cmd)
@@ -326,25 +328,29 @@ else:
     reservation = raw_input('Do you want me to do the reservation (y/[N]): ')
 
 oar_job_id, oargrid_job_id = None, None
-if reservation in [ 'y', 'Y', 'yes'] :
+if reservation in ['y', 'Y', 'yes']:
     if args.no_oargrid or (len(jobs_specs) == 1 and not args.force_oargrid):
         jobs = oarsub(jobs_specs)
         for job in jobs:
             if job[0] is not None:
-                logger.info('Reservation done on %s:%s', style.emph(job[1]), job[0])
+                logger.info('Reservation done on %s:%s',
+                            style.emph(job[1]), job[0])
             else:
-                logger.error('Error in performing the reservation on site %s', style.emph(job[1]))
+                logger.error('Error in performing the reservation on site %s',
+                             style.emph(job[1]))
     else:
-        (oargrid_job_id, _) = oargridsub(jobs_specs, walltime = args.walltime,
-         additional_options = args.submission_opts,
-         reservation_date = startdate)
+        (oargrid_job_id, _) = oargridsub(jobs_specs, walltime=args.walltime,
+                                    additional_options=args.submission_opts,
+                                    reservation_date=startdate)
         if oargrid_job_id is not None:
-            logger.info('Grid reservation done, oargrid_job_id = %s',oargrid_job_id)
+            logger.info('Grid reservation done, oargrid_job_id = %s',
+                        oargrid_job_id)
             log = style.log_header('Jobs')
             jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
             for job_id, site in jobs:
-                log += '\n'+style.emph(site).ljust(25)+str(job_id).rjust(9)
-            log += '\n'+style.emph('Key file: ')+get_oargrid_job_key(oargrid_job_id)
+                log += '\n' + style.emph(site).ljust(25) + str(job_id).rjust(9)
+            log += '\n' + style.emph('Key file: ') + \
+                    get_oargrid_job_key(oargrid_job_id)
             logger.info(log)
             exit(oargrid_job_id)
         else:
