@@ -134,8 +134,8 @@ optreservation.add_argument('--infiniband',
                 dest="infiniband",
                 action="store_true",
                 help="Use only clusters with infiniband or myrinet interfaces")
-optreservation.add_argument('--energy',
-                dest="energy",
+optreservation.add_argument('--green',
+                dest="green",
                 action="store_true",
                 help="Use only clusters that have energetical power measurements")
 
@@ -148,7 +148,7 @@ optgrid.add_argument("--no-oargrid",
 optgrid.add_argument("--force-oargrid",
                 dest="force_oargrid",
                 action="store_true",
-                help="Force the usage of oargrisub, even if there only one site involved")
+                help="Force the usage of oargrisub, even if only one site is involved")
 
 
 opttime = parser.add_argument_group(style.host("Time"), "Define options related to date and time.")
@@ -220,7 +220,7 @@ blacklisted = []
 if args.blacklist:
     for element in args.blacklist.split(','):
         blacklisted.append(element)
-if args.virtual or args.energy or args.infiniband:
+if args.virtual or args.green or args.infiniband:
     logger.info('Retrieving cluster attributes to perform feature-based blacklist')
     feature_blacklist = []
     for cluster in get_g5k_clusters():
@@ -230,7 +230,7 @@ if args.virtual or args.energy or args.infiniband:
         if args.infiniband and len(filter(lambda x: x['interface'] == 'InfiniBand',
                         cluster_attr['network_adapters'])) == 0:
             feature_blacklist.append(cluster)
-        if args.energy and (not 'sensors' in cluster_attr or \
+        if args.green and (not 'sensors' in cluster_attr or \
                             not cluster_attr['sensors']['power']):
             feature_blacklist.append(cluster)
     blacklisted = list(set(blacklisted + feature_blacklist))
