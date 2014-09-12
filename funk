@@ -213,13 +213,14 @@ for element in args.resources.split(','):
         if ':' in element:
             logger.warning('You give a resource element:n_nodes corresponding ' + \
                            'to a ' + style.emph('free') + ' mode ! ')
-            switch_mode = raw_input('Do you want to switch to free mode (y/[N]): ')
-            if switch_mode == 'y':
-                args.mode = 'free'
-                element_uid, n_nodes = element.split(':')
-            else:
+            switch_mode = raw_input('Do you want to switch to free mode ([Y]/n): ')
+            if switch_mode == 'n':
                 logger.warning('The number of nodes specified will be ignored ...')
                 element_uid, n_nodes = element.split(':')[0], 0
+            else:
+                args.mode = 'free'
+                element_uid, n_nodes = element.split(':')
+                
         else:
             element_uid, n_nodes = element, 0
     resources_wanted[element_uid] = int(n_nodes)
