@@ -31,7 +31,7 @@ description = 'This tool helps you to find resources on ' + \
     style.host('max') + '  = find the time slot where the maximum number of nodes are available.\n\n' + \
     """If no arguments is given, compile the planning of the whole platform and generate an
     oargridsub command line with all available resources for 1 hour.
-    Based on execo 2.2, """ + style.emph('http://execo.gforge.inria.fr/doc/') + \
+    Based on execo 2.4, """ + style.emph('http://execo.gforge.inria.fr/doc/') + \
     'oar 2.5, ' + style.emph('http://oar.imag.fr') + '.'
 
 epilog = style.host('Examples:') + \
@@ -60,7 +60,7 @@ optinout.add_argument("-h", "--help",
                       help="show this help message and exit")
 optinout.add_argument('--version',
                       action='version',
-                      version='%(prog)s 1.2')
+                      version='%(prog)s 1.2.1')
 optinout.add_argument("-m", "--mode",
                       dest="mode",
                       default='date',
@@ -100,7 +100,8 @@ optreservation = parser.add_argument_group(style.host("Reservation"),
 optreservation.add_argument("-r", "--resources",
                             dest="resources",
                             default="grid5000",
-                            help="Comma separated list of Grid'5000 elements (grid5000, site or cluster)" +
+                            help="Comma separated list of Grid'5000 elements " +
+                            " (grid5000, site or cluster)" +
                             "\n-r element1,element2 for date and max modes" +
                             "\n-r element1:n_nodes1,element2:n_nodes2 for free mode" +
                             "\ndefault = %(default)s")
@@ -123,7 +124,7 @@ optreservation.add_argument("-k", "--kavlan",
                             help="Ask for a KaVLAN")
 optreservation.add_argument("-n", "--subnet",
                             dest="subnet",
-                            help="Ask for subnets. slash_22=1 will retrieve a /22 subnet on every site of your requests, "+\
+                            help="Ask for subnets. slash_22=1 will retrieve a /22 subnet on every site of your requests, " +\
                             "\nbut you can specify site1:slash_22=2,site2:slash_19=1")
 
 optreservation.add_argument("-j", "--job_name",
@@ -238,10 +239,10 @@ if args.virtual or args.green or args.infiniband:
         if args.virtual and not cluster_attr['supported_job_types']['virtual']:
             feature_blacklist.append(cluster)
         if args.infiniband and len(filter(lambda x: x['interface'] == 'InfiniBand',
-                        cluster_attr['network_adapters'])) == 0:
+                                          cluster_attr['network_adapters'])) == 0:
             feature_blacklist.append(cluster)
-        if args.green and (not 'sensors' in cluster_attr or \
-                            not cluster_attr['sensors']['power']):
+        if args.green and ('sensors' not in cluster_attr or
+                           not cluster_attr['sensors']['power']):
             feature_blacklist.append(cluster)
     blacklisted = list(set(blacklisted + feature_blacklist))
 
@@ -257,7 +258,8 @@ else:
             sites.append(element)
 
 
-# Adding network elements, and blacklisting rennes and nantes if kavlan is used and multiple sites wanted
+# Adding network elements, and blacklisting rennes and nantes if kavlan is used
+# and multiple sites wanted
 if args.kavlan:
     resources_wanted['kavlan'] = 1
     if len(sites) > 1:
@@ -268,16 +270,9 @@ if args.kavlan:
 
 if args.subnet:
     resources_wanted['subnets'] = args.subnet
-    logger.warning('subnet is not implemented in execo_g5k.planning, ' + \
-                   'we cannot assure that the requested resources will be available')
-#if args.storage:
-#    resources_wanted['storage'] = args.storage
-#    logger.warning('storage is not implemented in execo_g5k.planning, '+\
-#                   'we cannot assure that the requested resources will be availables')
-#    storage = True
-#else:
-#    storage = False
-
+    logger.warning('subnet is not implemented in execo_g5k.planning, ' +
+                   'we cannot assure that the requested subnets will ' +
+                   'be available')
 
 logger.info('From %s to %s', style.emph(format_date(args.startdate)),
             style.emph(format_date(args.enddate)))
@@ -290,12 +285,12 @@ show_resources({resource: n_nodes for resource, n_nodes in resources_wanted.iter
 # Computing the planning of the ressources wanted
 logger.info('Compiling planning')
 planning = get_planning(elements=resources_wanted.keys(),
-            vlan=args.kavlan,
-            subnet=False,
-            storage=False,
-            out_of_chart=args.charter,
-            starttime=args.startdate,
-            endtime=args.enddate)
+                        vlan=args.kavlan,
+                        subnet=False,
+                        storage=False,
+                        out_of_chart=args.charter,
+                        starttime=args.startdate,
+                        endtime=args.enddate)
 
 # Determing the slots for the given walltime, i.e. finding the slice of time with constant resources
 logger.info('Calculating slots of %s ', args.walltime)
@@ -308,11 +303,13 @@ if args.plots:
         draw_gantt(planning, outfile="funk_gantt.png")
 
         if MPL.__version__ < '1.2.0':
-            logger.warning('Slots drawing use stackplot that requires matlplotlib >= 1.2.0')
+            logger.warning('Slots drawing use stackplot that ' +
+                           'requires matlplotlib >= 1.2.0')
         else:
             draw_slots(slots, outfile="funk_slots.png")
     except:
-        logger.warning('No matplotlib package detected, plots cannot be created')
+        logger.warning('No matplotlib package detected, ' +
+                       'plots cannot be created')
         pass
 
 # Determine the slot to use
@@ -340,7 +337,7 @@ resources = distribute_hosts(resources, resources_wanted, blacklisted,
                              args.ratio)
 show_resources(resources, 'Resources selected')
 
-logger.info(style.log_header('Chosen slot ') + format_date(startdate) + \
+logger.info(style.log_header('Chosen slot ') + format_date(startdate) +
             ' -> ' + format_date(enddate))
 
 jobs_specs = get_jobs_specs(resources, excluded_elements=blacklisted,
