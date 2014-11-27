@@ -32,19 +32,20 @@ description = 'This tool helps you to find resources on ' + \
     """If no arguments is given, compile the planning of the whole platform and generate an
     oargridsub command line with all available resources for 1 hour.
     Based on execo 2.2, """ + style.emph('http://execo.gforge.inria.fr/doc/') + \
-    'oar 2.5, ' + style.emph('http://oar.imag.fr') + """
-    and the Grid'5000 Job API, """ + style.emph('https://api.grid5000.fr') + '.'
+    'oar 2.5, ' + style.emph('http://oar.imag.fr') + '.'
 
 epilog = style.host('Examples:') + \
     '\nNumber of available nodes on stremi cluster from date to date + walltime \n' + \
-    style.command('  %(prog)s -m date -s "' + \
-    format_oar_date(int(time() + timedelta_to_seconds(timedelta( minutes = 1)))) + \
-    '" -r stremi\n') + \
+    style.command('  %(prog)s -m date -s "' +
+                  format_oar_date(int(time() +
+                                      timedelta_to_seconds(timedelta(minutes=1)))) +
+                  '" -r stremi\n') + \
     'First free slots for a resource combination with deploy job type and a KaVLAN\n' + \
     style.command('  %(prog)s -m free -w 2:00:00 -r grid5000:100,taurus:4 -o "-t deploy" -k\n') + \
     'Maximum number of nodes available for the resources, avoiding charter periods\n' +\
     style.command('  %(prog)s -m max -w 10:00:00 -r nancy,paradent,edel -c \n') + \
-    'Issues/features requests can be reported to ' + style.emph('https://github.com/lpouillo/Funk')
+    'Issues/features requests can be reported to ' + \
+    style.emph('https://github.com/lpouillo/Funk')
 
 parser = ArgumentParser(prog=prog,
                         description=description,
@@ -53,131 +54,129 @@ parser = ArgumentParser(prog=prog,
                         add_help=False)
 
 optinout = parser.add_argument_group(style.host("General options"),
-                "Define mode and controls I/O.")
+                                     "Define mode and controls I/O.")
 optinout.add_argument("-h", "--help",
-                action="help",
-                help="show this help message and exit")
+                      action="help",
+                      help="show this help message and exit")
 optinout.add_argument('--version',
-                action='version',
-                version='%(prog)s 1.2')
+                      action='version',
+                      version='%(prog)s 1.2')
 optinout.add_argument("-m", "--mode",
-                dest="mode",
-                default='date',
-                help="Setup the mode: date, free or max " + \
-                    "\ndefault = %(default)s")
+                      dest="mode",
+                      default='date',
+                      help="Setup the mode: date, free or max " +
+                      "\ndefault = %(default)s")
 optinout.add_argument("-y", "--yes",
-                action="store_true",
-                dest="yes",
-                default=False,
-                help="Perform the reservation automatically")
+                      action="store_true",
+                      dest="yes",
+                      default=False,
+                      help="Perform the reservation automatically")
 optio = optinout.add_mutually_exclusive_group()
 optio.add_argument("-q", "--quiet",
-                dest="quiet",
-                action="store_true",
-                default=False,
-                help="Run without printing anything")
+                   dest="quiet",
+                   action="store_true",
+                   default=False,
+                   help="Run without printing anything")
 optio.add_argument("-v", "--verbose",
-                dest="verbose",
-                action="store_true",
-                default=False,
-                help="Run in verbose mode")
+                   dest="verbose",
+                   action="store_true",
+                   default=False,
+                   help="Run in verbose mode")
 optinout.add_argument("-p", "--prog",
-                dest="prog",
-                help="The program to be run when the reservation start")
+                      dest="prog",
+                      help="The program to be run when the reservation start")
 optinout.add_argument("--plots",
-                dest="plots",
-                action="store_true",
-                help="Draw a Gantt plot and the slots")
+                      dest="plots",
+                      action="store_true",
+                      help="Draw a Gantt plot and the slots")
 optinout.add_argument("--json",
-                dest="json",
-                action="store_true",
-                help="Produce a json file that contains all the informations")
+                      dest="json",
+                      action="store_true",
+                      help="Produce a json file that contains all the " +
+                      "informations")
 
 optreservation = parser.add_argument_group(style.host("Reservation"),
-                "Customize your Grid'5000 reservation.")
+                                           "Customize your Grid'5000 reservation.")
 optreservation.add_argument("-r", "--resources",
-                dest="resources",
-                default="grid5000",
-                help="Comma separated list of Grid'5000 elements (grid5000, site or cluster)" + \
-                    "\n-r element1,element2 for date and max modes" + \
-                    "\n-r element1:n_nodes1,element2:n_nodes2 for free mode" + \
-                    "\ndefault = %(default)s")
+                            dest="resources",
+                            default="grid5000",
+                            help="Comma separated list of Grid'5000 elements (grid5000, site or cluster)" +
+                            "\n-r element1,element2 for date and max modes" +
+                            "\n-r element1:n_nodes1,element2:n_nodes2 for free mode" +
+                            "\ndefault = %(default)s")
 optreservation.add_argument("-b", "--blacklist",
-                dest="blacklist",
-                help="Remove clusters from planning computation")
+                            dest="blacklist",
+                            help="Remove clusters from planning computation")
 optreservation.add_argument("-R", "--ratio",
-                dest="ratio",
-                type=float,
-                default=None,
-                help="Apply a given ratio to the host resources")
+                            dest="ratio",
+                            type=float,
+                            default=None,
+                            help="Apply a given ratio to the host resources")
 optreservation.add_argument("-o", "--submission_opts",
-                dest="submission_opts",
-                default="",
-                help="Extra options to pass to the oarsub/oargridsub command line")
+                            dest="submission_opts",
+                            default="",
+                            help="Extra options to pass to the oarsub/oargridsub command line")
 optreservation.add_argument("-k", "--kavlan",
-                dest="kavlan",
-                action="store_true",
-                default=False,
-                help="Ask for a KaVLAN")
+                            dest="kavlan",
+                            action="store_true",
+                            default=False,
+                            help="Ask for a KaVLAN")
 optreservation.add_argument("-n", "--subnet",
-                dest="subnet",
-                help="Ask for subnets. slash_22=1 will retrieve a /22 subnet on every site of your requests, "+\
-                "\nbut you can specify site1:slash_22=2,site2:slash_19=1")
-#optreservation.add_argument("-d", "--storage",
-#                dest = "storage",
-#                help="Ask for storage")
-# Subnet and storage computation not implemented
+                            dest="subnet",
+                            help="Ask for subnets. slash_22=1 will retrieve a /22 subnet on every site of your requests, "+\
+                            "\nbut you can specify site1:slash_22=2,site2:slash_19=1")
+
 optreservation.add_argument("-j", "--job_name",
-                dest="job_name",
-                default="FUNK",
-                help="The job name passed to the OAR subjobs" + \
-                    "\ndefault = %(default)s")
+                            dest="job_name",
+                            default="FUNK",
+                            help="The job name passed to the OAR subjobs" + \
+                            "\ndefault = %(default)s")
 optreservation.add_argument('--virtual',
-                dest="virtual",
-                action="store_true",
-                help="Use only clusters with hardware virtualization")
+                            dest="virtual",
+                            action="store_true",
+                            help="Use only clusters with hardware virtualization")
 optreservation.add_argument('--infiniband',
-                dest="infiniband",
-                action="store_true",
-                help="Use only clusters with infiniband or myrinet interfaces")
+                            dest="infiniband",
+                            action="store_true",
+                            help="Use only clusters with infiniband or myrinet interfaces")
 optreservation.add_argument('--green',
-                dest="green",
-                action="store_true",
-                help="Use only clusters that have energetical power measurements")
+                            dest="green",
+                            action="store_true",
+                            help="Use only clusters that have energetical power measurements")
 
 
 optgrid = optreservation.add_mutually_exclusive_group()
 optgrid.add_argument("--no-oargrid",
-                dest="no_oargrid",
-                action="store_true",
-                help="Don't use oargridsub and perform parallel oar reservations")
+                     dest="no_oargrid",
+                     action="store_true",
+                     help="Don't use oargridsub and perform parallel oar reservations")
 optgrid.add_argument("--force-oargrid",
-                dest="force_oargrid",
-                action="store_true",
-                help="Force the usage of oargrisub, even if only one site is involved")
+                     dest="force_oargrid",
+                     action="store_true",
+                     help="Force the usage of oargrisub, even if only one site is involved")
 
 
 opttime = parser.add_argument_group(style.host("Time"), "Define options related to date and time.")
 opttime.add_argument("-w", "--walltime",
-                dest="walltime",
-                default='1:00:00',
-                help="Reservation walltime in OAR format" + \
-                    "\ndefault = %(default)s")
+                     dest="walltime",
+                     default='1:00:00',
+                     help="Reservation walltime in OAR format" +
+                     "\ndefault = %(default)s")
 opttime.add_argument("-s", "--startdate",
-                dest="startdate",
-                default=int(time() + timedelta_to_seconds(timedelta(minutes=1))),
-                help="Starting date in OAR format" + \
-                    "\ndefault = %(default)s")
+                     dest="startdate",
+                     default=int(time() + timedelta_to_seconds(timedelta(minutes=1))),
+                     help="Starting date in OAR format" +
+                     "\ndefault = %(default)s")
 opttime.add_argument("-e", "--enddate",
-                dest="enddate",
-                default=int(time() + timedelta_to_seconds(timedelta(weeks=3, minutes=1))),
-                help="End date in OAR format" + \
-                    "\ndefault = %(default)s")
+                     dest="enddate",
+                     default=int(time() + timedelta_to_seconds(timedelta(weeks=3, minutes=1))),
+                     help="End date in OAR format" +
+                     "\ndefault = %(default)s")
 opttime.add_argument("-c", "--charter",
-                dest="charter",
-                default=False,
-                action="store_true",
-                help="Avoid charter periods")
+                     dest="charter",
+                     default=False,
+                     action="store_true",
+                     help="Avoid charter periods")
 args = parser.parse_args()
 
 if not args.json:
@@ -190,21 +189,23 @@ if not args.json:
 else:
     logger.setLevel('ERROR')
 
-# Printing welcome message
+# Printing welcome message
 logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K --'))
 # Checking options valuers
-logger.detail('Options\n%s', '\n'.join([style.emph(option.ljust(20)) + \
-        '= ' + str(value).ljust(10) for option, value in vars(args).iteritems()
-        if value is not None]))
+logger.detail('Options\n%s', '\n'.join([style.emph(option.ljust(20)) +
+                                        '= ' + str(value).ljust(10)
+                                        for option, value in vars(args).iteritems()
+                                        if value is not None]))
 
 if args.prog is not None:
     logger.info('Program: %s', style.emph(args.prog))
-# Creating resources dict from command line options resources (-r)
+# Creating resources dict from command line options resources (-r)
 resources_wanted = {}
 for element in args.resources.split(','):
     if args.mode == 'free':
-        if not ':' in element:
-            logger.error('You must specify the number of host element:n_nodes when using free mode')
+        if ':' not in element:
+            logger.error('You must specify the number of host ' +
+                         'element:n_nodes when using free mode')
             exit()
         else:
             element_uid, n_nodes = element.split(':')
@@ -220,12 +221,11 @@ for element in args.resources.split(','):
             else:
                 args.mode = 'free'
                 element_uid, n_nodes = element.split(':')
-                
         else:
             element_uid, n_nodes = element, 0
     resources_wanted[element_uid] = int(n_nodes)
 
-# Managing blacklist from options
+# Managing blacklist from options
 blacklisted = []
 if args.blacklist:
     for element in args.blacklist.split(','):
@@ -379,14 +379,15 @@ if args.no_oargrid or (len(jobs_specs) == 1 and not args.force_oargrid):
     cmd = cmd[0:-2]
 else:
     cmd = get_oargridsub_commandline(jobs_specs, walltime=args.walltime,
-         additional_options=args.submission_opts, reservation_date=startdate)
+                                     additional_options=args.submission_opts,
+                                     reservation_date=startdate)
 
 
 logger.info('Reservation command: \n\033[1m%s\033[0m', cmd)
 if args.json:
     data = {
-        'cmd': [cmd] if '\n' not in cmd  else
-            [oarsub for oarsub in cmd.split('\n')],
+        'cmd': [cmd] if '\n' not in cmd else
+        [oarsub for oarsub in cmd.split('\n')],
         'options': {
             'mode': args.mode,
             'resources_wanted': resources_wanted,
@@ -403,42 +404,44 @@ if args.json:
             'infiniband': True if args.infiniband else False,
             'charter': True if args.charter else False,
             'oargrid': True if (len(jobs_specs) > 1 and not args.no_oargrid)
-                    or args.force_oargrid   else False
-                    },
-        'slots': slots,
-            }
+            or args.force_oargrid else False},
+        'slots': slots}
 
     print json.dumps(data, sort_keys=True)
 else:
     if args.yes:
         reservation = 'y'
     else:
-        reservation = raw_input('Do you want me to do the reservation (y/[N]): ')
+        reservation = raw_input('Do you want to do the reservation (y/[N]): ')
 
     oar_job_id, oargrid_job_id = None, None
     if reservation in ['y', 'Y', 'yes']:
-        if args.no_oargrid or (len(jobs_specs) == 1 and not args.force_oargrid):
+        if args.no_oargrid or (len(jobs_specs) == 1
+                               and not args.force_oargrid):
             jobs = oarsubgrid(jobs_specs)
             for job in jobs:
                 if job[0] is not None:
                     logger.info('Reservation done on %s:%s',
                                 style.emph(job[1]), job[0])
                 else:
-                    logger.error('Error in performing the reservation on site %s',
+                    logger.error('Error in performing the ' +
+                                 'reservation on site %s',
                                  style.emph(job[1]))
         else:
-            (oargrid_job_id, _) = oargridsub(jobs_specs, walltime=args.walltime,
-                                        additional_options=args.submission_opts,
-                                        reservation_date=startdate)
+            (oargrid_job_id, _) = oargridsub(jobs_specs,
+                                             walltime=args.walltime,
+                                             additional_options=args.submission_opts,
+                                             reservation_date=startdate)
             if oargrid_job_id is not None:
                 logger.info('Grid reservation done, oargrid_job_id = %s',
                             oargrid_job_id)
                 log = style.log_header('Jobs')
                 jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
                 for job_id, site in jobs:
-                    log += '\n' + style.emph(site).ljust(25) + str(job_id).rjust(9)
+                    log += '\n' + style.emph(site).ljust(25) + \
+                        str(job_id).rjust(9)
                 log += '\n' + style.emph('Key file: ') + \
-                        get_oargrid_job_key(oargrid_job_id)
+                    get_oargrid_job_key(oargrid_job_id)
                 logger.info(log)
                 exit(oargrid_job_id)
             else:
