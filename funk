@@ -242,7 +242,8 @@ if args.virtual or args.green or args.infiniband:
                                           cluster_attr['network_adapters'])) == 0:
             feature_blacklist.append(cluster)
         if args.green and ('sensors' not in cluster_attr or
-                           not cluster_attr['sensors']['power']):
+                           not cluster_attr['sensors']['power']
+                           or not cluster_attr['sensors']['power']['available']):
             feature_blacklist.append(cluster)
     blacklisted = list(set(blacklisted + feature_blacklist))
 
