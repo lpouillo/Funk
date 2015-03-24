@@ -7,6 +7,7 @@
 #    Developped by the Hemera initiative, 2013-2014
 #    https://www.grid5000.fr/mediawiki/index.php/Funk
 #
+import re
 import json
 from argparse import ArgumentParser, RawTextHelpFormatter
 from time import time
@@ -14,411 +15,416 @@ from datetime import timedelta
 from execo import logger
 from execo.log import style
 from execo_g5k import get_g5k_sites, get_g5k_clusters, get_host_attributes
-from execo_g5k.planning import show_resources, get_planning, compute_slots, \
-    draw_gantt, draw_slots, find_first_slot, find_max_slot, find_free_slot, \
+from execo_g5k.planning import show_resources, get_slots, draw_slots, \
+    find_first_slot, find_max_slot, find_free_slot, \
     get_jobs_specs, distribute_hosts
 from execo_g5k.oargrid import get_oargridsub_commandline, \
     get_oargrid_job_oar_jobs, get_oargrid_job_key, oargridsub
-from execo_g5k.oar import get_oarsub_commandline, oarsubgrid, format_oar_date, \
+from execo_g5k.oar import get_oarsub_commandline, oarsub, format_oar_date, \
     format_oar_duration
 from execo.time_utils import timedelta_to_seconds, format_date
 
-prog = 'funk'
-description = 'This tool helps you to find resources on ' + \
-    style.log_header("Grid'5000") + ' platform. It has three modes: \n - ' + \
-    style.host('date') + ' = give you the number of nodes available at a given date, \n - ' + \
-    style.host('free') + ' = find the next free slot for a combination of resources, \n - ' + \
-    style.host('max') + '  = find the time slot where the maximum number of nodes are available.\n\n' + \
-    """If no arguments is given, compile the planning of the whole platform and generate an
-    oargridsub command line with all available resources for 1 hour.
-    Based on execo 2.4, """ + style.emph('http://execo.gforge.inria.fr/doc/') + \
-    'oar 2.5, ' + style.emph('http://oar.imag.fr') + '.'
-
-epilog = style.host('Examples:') + \
-    '\nNumber of available nodes on stremi cluster from date to date + walltime \n' + \
-    style.command('  %(prog)s -m date -s "' +
-                  format_oar_date(int(time() +
-                                      timedelta_to_seconds(timedelta(minutes=1)))) +
-                  '" -r stremi\n') + \
-    'First free slots for a resource combination with deploy job type and a KaVLAN\n' + \
-    style.command('  %(prog)s -m free -w 2:00:00 -r grid5000:100,taurus:4 -o "-t deploy" -k\n') + \
-    'Maximum number of nodes available for the resources, avoiding charter periods\n' +\
-    style.command('  %(prog)s -m max -w 10:00:00 -r nancy,paradent,edel -c \n') + \
-    'Issues/features requests can be reported to ' + \
-    style.emph('https://github.com/lpouillo/Funk')
-
-parser = ArgumentParser(prog=prog,
-                        description=description,
-                        epilog=epilog,
-                        formatter_class=RawTextHelpFormatter,
-                        add_help=False)
-
-optinout = parser.add_argument_group(style.host("General options"),
-                                     "Define mode and controls I/O.")
-optinout.add_argument("-h", "--help",
-                      action="help",
-                      help="show this help message and exit")
-optinout.add_argument('--version',
-                      action='version',
-                      version='%(prog)s 1.2.2')
-optinout.add_argument("-m", "--mode",
-                      dest="mode",
-                      default='date',
-                      help="Setup the mode: date, free or max " +
-                      "\ndefault = %(default)s")
-optinout.add_argument("-y", "--yes",
-                      action="store_true",
-                      dest="yes",
-                      default=False,
-                      help="Perform the reservation automatically")
-optio = optinout.add_mutually_exclusive_group()
-optio.add_argument("-q", "--quiet",
-                   dest="quiet",
-                   action="store_true",
-                   default=False,
-                   help="Run without printing anything")
-optio.add_argument("-v", "--verbose",
-                   dest="verbose",
-                   action="store_true",
-                   default=False,
-                   help="Run in verbose mode")
-optinout.add_argument("-p", "--prog",
-                      dest="prog",
-                      help="The program to be run when the reservation start")
-optinout.add_argument("--plots",
-                      dest="plots",
-                      action="store_true",
-                      help="Draw a Gantt plot and the slots")
-optinout.add_argument("--json",
-                      dest="json",
-                      action="store_true",
-                      help="Produce a json file that contains all the " +
-                      "informations")
-
-optreservation = parser.add_argument_group(style.host("Reservation"),
-                                           "Customize your Grid'5000 reservation.")
-optreservation.add_argument("-r", "--resources",
-                            dest="resources",
-                            default="grid5000",
-                            help="Comma separated list of Grid'5000 elements " +
-                            " (grid5000, site or cluster)" +
-                            "\n-r element1,element2 for date and max modes" +
-                            "\n-r element1:n_nodes1,element2:n_nodes2 for free mode" +
-                            "\ndefault = %(default)s")
-optreservation.add_argument("-b", "--blacklist",
-                            dest="blacklist",
-                            help="Remove clusters from planning computation")
-optreservation.add_argument("-R", "--ratio",
-                            dest="ratio",
-                            type=float,
-                            default=None,
-                            help="Apply a given ratio to the host resources")
-optreservation.add_argument("-o", "--submission_opts",
-                            dest="submission_opts",
-                            default="",
-                            help="Extra options to pass to the oarsub/oargridsub command line")
-optreservation.add_argument("-k", "--kavlan",
-                            dest="kavlan",
-                            action="store_true",
-                            default=False,
-                            help="Ask for a KaVLAN")
-optreservation.add_argument("-n", "--subnet",
-                            dest="subnet",
-                            help="Ask for subnets. slash_22=1 will retrieve a /22 subnet on every site of your requests, " +\
-                            "\nbut you can specify site1:slash_22=2,site2:slash_19=1")
-
-optreservation.add_argument("-j", "--job_name",
-                            dest="job_name",
-                            default="FUNK",
-                            help="The job name passed to the OAR subjobs" + \
-                            "\ndefault = %(default)s")
-optreservation.add_argument('--virtual',
-                            dest="virtual",
-                            action="store_true",
-                            help="Use only clusters with hardware virtualization")
-optreservation.add_argument('--infiniband',
-                            dest="infiniband",
-                            action="store_true",
-                            help="Use only clusters with infiniband or myrinet interfaces")
-optreservation.add_argument('--green',
-                            dest="green",
-                            action="store_true",
-                            help="Use only clusters that have energetical power measurements")
+__version__ = '1.3-dev'
 
 
-optgrid = optreservation.add_mutually_exclusive_group()
-optgrid.add_argument("--no-oargrid",
-                     dest="no_oargrid",
-                     action="store_true",
-                     help="Don't use oargridsub and perform parallel oar reservations")
-optgrid.add_argument("--force-oargrid",
-                     dest="force_oargrid",
-                     action="store_true",
-                     help="Force the usage of oargrisub, even if only one site is involved")
+def main(args=None):
+    if not args:
+        args = set_options()
+    set_loglevel(args.verbose, args.quiet, args.json)
+    welcome(args)
+    mode, resources_wanted, blacklisted = define_resources(args.mode,
+                                                           args.resources,
+                                                           args.blacklist,
+                                                           args.virtual,
+                                                           args.infiniband,
+                                                           args.green,
+                                                           args.kavlan,
+                                                           args.subnet,
+                                                           not args.json or \
+                                                           not args.yes)
 
+    slots = get_slots(elements=resources_wanted.keys(), walltime=args.walltime,
+                      kavlan=args.kavlan, subnet=False,
+                      out_of_chart=args.charter, starttime=args.startdate,
+                      endtime=args.enddate, blacklisted=blacklisted)
+    if args.plots:
+        try:
+            draw_slots(slots, outfile="funk_slots.png")
+        except:
+            logger.warning('No matplotlib package detected, ' +
+                       'plots cannot be created')
+            pass
 
-opttime = parser.add_argument_group(style.host("Time"), "Define options related to date and time.")
-opttime.add_argument("-w", "--walltime",
-                     dest="walltime",
-                     default='1:00:00',
-                     help="Reservation walltime in OAR format" +
-                     "\ndefault = %(default)s")
-opttime.add_argument("-s", "--startdate",
-                     dest="startdate",
-                     default=int(time() + timedelta_to_seconds(timedelta(minutes=1))),
-                     help="Starting date in OAR format" +
-                     "\ndefault = %(default)s")
-opttime.add_argument("-e", "--enddate",
-                     dest="enddate",
-                     default=int(time() + timedelta_to_seconds(timedelta(weeks=3, minutes=1))),
-                     help="End date in OAR format" +
-                     "\ndefault = %(default)s")
-opttime.add_argument("-c", "--charter",
-                     dest="charter",
-                     default=False,
-                     action="store_true",
-                     help="Avoid charter periods")
-args = parser.parse_args()
+    startdate, enddate, resources = choose_slot(mode, slots, resources_wanted)
+    if startdate is None:
+        logger.error('Sorry, unable to find the resources required.')
+        exit()
+    jobs_specs = create_jobs(args.job_name, args.walltime, startdate, enddate,
+                             resources, resources_wanted, args.blacklist,
+                             args.ratio, args.subnet, args.submission_opts,
+                             args.program)
 
-if not args.json:
-    if args.verbose:
-        logger.setLevel('DEBUG')
-    elif args.quiet:
-        logger.setLevel('WARN')
+    cmd = get_reservation_cmd(jobs_specs, startdate, args.walltime,
+                              args.submission_opts, args.program,
+                              args.no_oargrid, args.force_oargrid)
+    if args.json:
+        json_dumps(cmd, slots, resources_wanted, args)
     else:
-        logger.setLevel('INFO')
-else:
-    logger.setLevel('ERROR')
+        make_reservation(args, jobs_specs, startdate)
 
-# Printing welcome message
-logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K --'))
-# Checking options valuers
-logger.detail('Options\n%s', '\n'.join([style.emph(option.ljust(20)) +
+
+def set_options():
+    """Define the options for execution"""
+    prog = 'funk'
+    description = 'This tool helps you to find resources on ' + \
+        style.log_header("Grid'5000") + ' platform. It has three modes: \n - ' + \
+        style.host('date') + ' = give you the number of nodes available at a given date, \n - ' + \
+        style.host('free') + ' = find the next free slot for a combination of resources, \n - ' + \
+        style.host('max') + '  = find the time slot where the maximum number of nodes are available.\n\n' + \
+        """If no arguments is given, compile the planning of the whole platform and generate an
+        oargridsub command line with all available resources for 1 hour.
+        Based on execo 2.4, """ + style.emph('http://execo.gforge.inria.fr/doc/') + \
+        'oar 2.5, ' + style.emph('http://oar.imag.fr') + '.'
+
+    epilog = style.host('Examples:') + \
+        '\nNumber of available nodes on stremi cluster from date to date + walltime \n' + \
+        style.command('  %(prog)s -m date -s "' +
+                      format_oar_date(int(time() +
+                                          timedelta_to_seconds(timedelta(minutes=1)))) +
+                      '" -r stremi\n') + \
+        'First free slots for a resource combination with deploy job type and a KaVLAN\n' + \
+        style.command('  %(prog)s -m free -w 2:00:00 -r grid5000:100,taurus:4 -o "-t deploy" -k\n') + \
+        'Maximum number of nodes available for the resources, avoiding charter periods\n' +\
+        style.command('  %(prog)s -m max -w 10:00:00 -r nancy,paradent,edel -c \n') + \
+        'Issues/features requests can be reported to ' + \
+        style.emph('https://github.com/lpouillo/Funk')
+
+    parser = ArgumentParser(prog=prog,
+                            description=description,
+                            epilog=epilog,
+                            formatter_class=RawTextHelpFormatter,
+                            add_help=False)
+
+    optinout = parser.add_argument_group(style.host("General options"),
+                                         "Define mode and controls I/O.")
+    optinout.add_argument("-h", "--help",
+                          action="help",
+                          help="show this help message and exit")
+    optinout.add_argument('--version',
+                          action='version',
+                          version='%(prog)s ' + __version__)
+    optinout.add_argument("-m", "--mode",
+                          default='date',
+                          help="Setup the mode: date, free or max " +
+                          "\ndefault = %(default)s")
+    optinout.add_argument("-y", "--yes",
+                          action="store_true",
+                          default=False,
+                          help="Perform the reservation automatically")
+    optio = optinout.add_mutually_exclusive_group()
+    optio.add_argument("-q", "--quiet",
+                       action="store_true",
+                       default=False,
+                       help="Run without printing anything")
+    optio.add_argument("-v", "--verbose",
+                       action="store_true",
+                       default=False,
+                       help="Run in verbose mode")
+    optinout.add_argument("-p", "--program",
+                          help="The program to be run when the reservation start")
+    optinout.add_argument("--plots",
+                          action="store_true",
+                          help="Draw a Gantt plot and the slots")
+    optinout.add_argument("--json",
+                          action="store_true",
+                          help="Output the computed data to a json file")
+
+    optreservation = parser.add_argument_group(style.host("Reservation"),
+                                               "Customize your Grid'5000 reservation.")
+    optreservation.add_argument("-r", "--resources",
+                                default="grid5000",
+                                help="Comma separated list of Grid'5000 elements " +
+                                " (grid5000, site or cluster)" +
+                                "\n-r element1,element2 for date and max modes" +
+                                "\n-r element1:n_nodes1,element2:n_nodes2 for free mode" +
+                                "\ndefault = %(default)s")
+    optreservation.add_argument("-b", "--blacklist",
+                                help="Remove clusters from planning computation")
+    optreservation.add_argument("-R", "--ratio",
+                                type=float,
+                                default=None,
+                                help="Apply a given ratio to the host resources")
+    optreservation.add_argument("-o", "--submission_opts",
+                                default="",
+                                help="Extra options to pass to the oarsub/oargridsub command line")
+    optreservation.add_argument("-k", "--kavlan",
+                                action="store_true",
+                                default=False,
+                                help="Ask for a KaVLAN")
+    optreservation.add_argument("-n", "--subnet",
+                                help="Ask for subnets. slash_22=1 will retrieve a /22 subnet on every site of your requests, " +\
+                                "\nbut you can specify site1:slash_22=2,site2:slash_19=1")
+    optreservation.add_argument("-j", "--job_name",
+                                default="FUNK",
+                                help="The job name passed to the OAR subjobs" + \
+                                "\ndefault = %(default)s")
+    optreservation.add_argument('--virtual',
+                                action="store_true",
+                                help="Use only clusters with hardware virtualization")
+    optreservation.add_argument('--infiniband',
+                                action="store_true",
+                                help="Use only clusters with infiniband or myrinet interfaces")
+    optreservation.add_argument('--green',
+                                action="store_true",
+                                help="Use only clusters that have energetical power measurements")
+
+    optgrid = optreservation.add_mutually_exclusive_group()
+    optgrid.add_argument("--no-oargrid",
+                         action="store_true",
+                         help="Don't use oargridsub and perform parallel oar reservations")
+    optgrid.add_argument("--force-oargrid",
+                         action="store_true",
+                         help="Force the usage of oargrisub, even if only one site is involved")
+
+    opttime = parser.add_argument_group(style.host("Time"), "Define options related to date and time.")
+    opttime.add_argument("-w", "--walltime",
+                         default='1:00:00',
+                         help="Reservation walltime in OAR format" +
+                         "\ndefault = %(default)s")
+    opttime.add_argument("-s", "--startdate",
+                         default=int(time() + timedelta_to_seconds(timedelta(minutes=1))),
+                         help="Starting date in OAR format" +
+                         "\ndefault = %(default)s")
+    opttime.add_argument("-e", "--enddate",
+                         default=int(time() + timedelta_to_seconds(timedelta(weeks=3, minutes=1))),
+                         help="End date in OAR format" +
+                         "\ndefault = %(default)s")
+    opttime.add_argument("-c", "--charter",
+                         default=False,
+                         action="store_true",
+                         help="Avoid charter periods")
+    return parser.parse_args()
+
+
+def set_loglevel(verbose, quiet, json):
+    if not json:
+        if verbose:
+            logger.setLevel('DEBUG')
+        elif quiet:
+            logger.setLevel('WARN')
+        else:
+            logger.setLevel('INFO')
+    else:
+        logger.setLevel('ERROR')
+
+
+def welcome(args):
+    logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K  ' +
+                                       __version__ + ' --'))
+    logger.detail('Options\n%s', '\n'.join([style.emph(option.ljust(20)) +
                                         '= ' + str(value).ljust(10)
                                         for option, value in vars(args).iteritems()
                                         if value is not None]))
 
-if args.prog is not None:
-    logger.info('Program: %s', style.emph(args.prog))
-# Creating resources dict from command line options resources (-r)
-resources_wanted = {}
-for element in args.resources.split(','):
-    if args.mode == 'free':
-        if ':' not in element:
-            logger.error('You must specify the number of host ' +
-                         'element:n_nodes when using free mode')
-            exit()
-        else:
-            element_uid, n_nodes = element.split(':')
-
-    else:
-        if ':' in element:
-            logger.warning('You give a resource element:n_nodes corresponding ' + \
-                           'to a ' + style.emph('free') + ' mode ! ')
-            switch_mode = raw_input('Do you want to switch to free mode ([Y]/n): ')
-            if switch_mode == 'n':
-                logger.warning('The number of nodes specified will be ignored ...')
-                element_uid, n_nodes = element.split(':')[0], 0
-            else:
-                args.mode = 'free'
-                element_uid, n_nodes = element.split(':')
-        else:
-            element_uid, n_nodes = element, 0
-    resources_wanted[element_uid] = int(n_nodes)
-
-# Managing blacklist from options
-blacklisted = []
-if args.blacklist:
-    for element in args.blacklist.split(','):
-        blacklisted.append(element)
-if args.virtual or args.green or args.infiniband:
-    logger.info('Retrieving cluster attributes to perform feature-based blacklist')
-    feature_blacklist = []
-    for cluster in get_g5k_clusters():
-        cluster_attr = get_host_attributes(cluster + '-1')
-        if args.virtual and not cluster_attr['supported_job_types']['virtual']:
-            feature_blacklist.append(cluster)
-        if args.infiniband and len(filter(lambda x: x['interface'] == 'InfiniBand',
-                                          cluster_attr['network_adapters'])) == 0:
-            feature_blacklist.append(cluster)
-        if args.green and ('sensors' not in cluster_attr or
-                           not cluster_attr['sensors']['power']
-                           or not cluster_attr['sensors']['power']['available']):
-            feature_blacklist.append(cluster)
-    blacklisted = list(set(blacklisted + feature_blacklist))
-
-logger.detail('Blacklisted elements %s', blacklisted)
-
-# Defining the sites
-if 'grid5000' in resources_wanted:
-    sites = get_g5k_sites()
-else:
-    sites = []
-    for element in resources_wanted.iterkeys():
-        if element in get_g5k_sites() and element not in sites:
-            sites.append(element)
-
-
-# Adding network elements, and blacklisting rennes and nantes if kavlan is used
-# and multiple sites wanted
-if args.kavlan:
-    resources_wanted['kavlan'] = 1
-    if len(sites) > 1:
-        # We blacklist sites which have no kavlan global
-        for site in ['nantes', 'reims']:
-            if site not in blacklisted:
-                blacklisted.append(site)
-
-if args.subnet:
-    resources_wanted['subnets'] = args.subnet
-    logger.warning('subnet is not implemented in execo_g5k.planning, ' +
-                   'we cannot assure that the requested subnets will ' +
-                   'be available')
-
-logger.info('From %s to %s', style.emph(format_date(args.startdate)),
+    logger.info('Mode: %s', style.emph(args.mode))
+    logger.info('From %s to %s', style.emph(format_date(args.startdate)),
             style.emph(format_date(args.enddate)))
-logger.info('Walltime: %s', style.emph(args.walltime))
-logger.info('Mode: %s', style.emph(args.mode))
-show_resources({resource: n_nodes for resource, n_nodes in resources_wanted.iteritems()},
-                 'Wanted resources')
+    logger.info('Walltime: %s', style.emph(args.walltime))
+    if args.program is not None:
+        logger.info('Program: %s', style.emph(args.program))
 
 
-# Computing the planning of the ressources wanted
-logger.info('Compiling planning')
-planning = get_planning(elements=resources_wanted.keys(),
-                        vlan=args.kavlan,
-                        subnet=False,
-                        storage=False,
-                        out_of_chart=args.charter,
-                        starttime=args.startdate,
-                        endtime=args.enddate)
+def define_resources(mode, resources, blacklist, virtual, infiniband, green,
+                    kavlan, subnet, yes=False):
+    # Creating resources dict from command line options resources (-r)
+    resources_wanted = {}
+    for element in resources.split(','):
+        if mode == 'free':
+            if ':' not in element:
+                logger.error('You must specify the number of host ' +
+                             'element:n_nodes when using free mode')
+                exit()
+            else:
+                element_uid, n_nodes = element.split(':')
 
-# Determing the slots for the given walltime, i.e. finding the slice of time with constant resources
-logger.info('Calculating slots of %s ', args.walltime)
-slots = compute_slots(planning, args.walltime, excluded_elements=blacklisted)
-logger.debug(slots)
-if args.plots:
-    try:
-        import matplotlib as MPL
-        logger.info('Drawing plots ')
-        draw_gantt(planning, outfile="funk_gantt.png")
-
-        if MPL.__version__ < '1.2.0':
-            logger.warning('Slots drawing use stackplot that ' +
-                           'requires matlplotlib >= 1.2.0')
         else:
-            draw_slots(slots, outfile="funk_slots.png")
-    except:
-        logger.warning('No matplotlib package detected, ' +
-                       'plots cannot be created')
-        pass
+            if ':' in element:
+                logger.warning('You give a resource element:n_nodes ' +
+                               'corresponding  to a ' + style.emph('free') +
+                               ' mode ! ')
 
-# Determine the slot to use
-if args.mode == 'date':
-    # In date mode, take the first slot available for the wanted walltime
-    startdate, enddate, resources = find_first_slot(slots, resources_wanted)
+                if not yes:
+                    switch_mode = raw_input('Do you want to switch to free mode ([Y]/n): ')
+                else:
+                    switch_mode = 'y'
+                if switch_mode == 'n':
+                    logger.warning('The number of nodes specified will be ignored ...')
+                    element_uid, n_nodes = element.split(':')[0], 0
+                else:
+                    mode = 'free'
+                    element_uid, n_nodes = element.split(':')
+            else:
+                element_uid, n_nodes = element, 0
+        resources_wanted[element_uid] = int(n_nodes)
 
-elif args.mode == 'max':
-    # In max mode, take the slot available with the maximum number of resources
-    startdate, enddate, resources = find_max_slot(slots, resources_wanted)
+    # Managing blacklist from options
+    blacklisted = []
+    if blacklist:
+        for element in blacklist.split(','):
+            blacklisted.append(element)
+    if virtual or green or infiniband:
+        logger.info('Retrieving cluster attributes to perform feature-based blacklist')
+        feature_blacklist = []
+        for cluster in get_g5k_clusters():
+            cluster_attr = get_host_attributes(cluster + '-1')
+            if virtual and not cluster_attr['supported_job_types']['virtual']:
+                feature_blacklist.append(cluster)
+            if infiniband and len(filter(lambda x: x['interface'] == 'InfiniBand',
+                                              cluster_attr['network_adapters'])) == 0:
+                feature_blacklist.append(cluster)
+            if green and ('sensors' not in cluster_attr or
+                               not cluster_attr['sensors']['power']
+                               or not cluster_attr['sensors']['power']['available']):
+                feature_blacklist.append(cluster)
+        blacklisted = list(set(blacklisted + feature_blacklist))
 
-elif args.mode == 'free':
-    # In free mode, take the first slot that match your resources
-    startdate, enddate, resources = find_free_slot(slots, resources_wanted)
+    logger.detail('Blacklisted elements %s', blacklisted)
 
-if startdate is None:
-    logger.error('Unable to find a slot for your requests.')
-    exit()
-else:
-    logger.info('A slot has been found at %s', format_date(startdate))
+    # Defining the sites
+    if 'grid5000' in resources_wanted:
+        sites = get_g5k_sites()
+    else:
+        sites = []
+        for element in resources_wanted.iterkeys():
+            if element in get_g5k_sites() and element not in sites:
+                sites.append(element)
 
-show_resources(resources, 'Resources available')
+    # Adding network elements, and blacklisting reims if kavlan is
+    # used and multiple sites wanted
+    if kavlan:
+        resources_wanted['kavlan'] = 1
+        if len(sites) > 1:
+            # We blacklist sites which have no kavlan global
+            for site in ['reims']:
+                if site in resources_wanted:
+                    logger.warning('Kavlan global does not work with %s, removing',
+                                   style.emph(site))
+                    del resources_wanted[site]
+                if site not in blacklisted:
+                    blacklisted.append(site)
+    if subnet:
+        resources_wanted['subnets'] = subnet
+        logger.warning('subnet is not implemented in execo_g5k.planning, ' +
+                       'we cannot assure that the requested subnets will ' +
+                       'be available')
 
-resources = distribute_hosts(resources, resources_wanted, blacklisted,
-                             args.ratio)
-show_resources(resources, 'Resources selected')
+    show_resources({resource: n_nodes
+                    for resource, n_nodes in resources_wanted.iteritems()},
+                   'Wanted resources')
 
-logger.info(style.log_header('Chosen slot ') + format_date(startdate) +
+    return mode, resources_wanted, blacklisted
+
+
+def choose_slot(mode, slots, resources_wanted):
+    # Determine the slot to use
+
+    if mode == 'date':
+        # In date mode, take the first slot available for the wanted walltime
+        start, end, resources = find_first_slot(slots, resources_wanted)
+
+    elif mode == 'max':
+        # In max mode, take the slot available with the maximum number of resources
+        start, end, resources = find_max_slot(slots, resources_wanted)
+
+    elif mode == 'free':
+        # In free mode, take the first slot that match your resources
+        start, end, resources = find_free_slot(slots, resources_wanted)
+
+    if start is None:
+        logger.error('Unable to find a slot for your requests.')
+        return None, None, None
+    else:
+        logger.info('A slot has been found at %s',
+                    style.emph(format_date(start)))
+    show_resources(resources, 'Resources available')
+
+    return start, end, resources
+
+
+def create_jobs(job_name=None, walltime=None, startdate=None, enddate=None,
+                resources=None, resources_wanted=None, blacklisted=None,
+                ratio=None, subnet=None, submission_opts=None, program=None):
+    resources = distribute_hosts(resources, resources_wanted, blacklisted,
+                             ratio)
+    show_resources(resources, 'Resources selected')
+
+    logger.info(style.log_header('Chosen slot ') + format_date(startdate) +
             ' -> ' + format_date(enddate))
 
-jobs_specs = get_jobs_specs(resources, excluded_elements=blacklisted,
-                            name=args.job_name)
-
-if args.subnet:
+    jobs_specs = get_jobs_specs(resources, excluded_elements=blacklisted,
+                            name=job_name)
     subnets = {}
-    sites_nets = args.subnet.split(',')
-    if len(sites_nets) == 1:
-        subnet_param = args.subnet.split(':')
-        if len(subnet_param) == 1:
-            subnets = {site: subnet_param[0] for site in get_g5k_sites()}
+    if subnet:
+        sites_nets = subnet.split(',')
+        if len(sites_nets) == 1:
+            subnet_param = subnet.split(':')
+            if len(subnet_param) == 1:
+                subnets = {site: subnet_param[0] for site in get_g5k_sites()}
+            else:
+                subnets = {subnet_param[0]: subnet_param[1]}
         else:
-            subnets = {subnet_param[0]: subnet_param[1]}
-    else:
-        for site_param in sites_nets:
-            site, param = site_param.split(':')
-            subnets[site] = param
-    # ADDING THE subnet to resources
-    for OarSubmission, frontend in jobs_specs:
-        if frontend in subnets:
-            OarSubmission.resources = subnets[frontend] + \
-                '+' + OarSubmission.resources
+            for site_param in sites_nets:
+                site, param = site_param.split(':')
+                subnets[site] = param
 
-if args.prog is not None:
-    args.submission_opts += ' -p ' + args.prog
-
-if args.no_oargrid or (len(jobs_specs) == 1 and not args.force_oargrid):
-    cmd = ''
     for sub, frontend in jobs_specs:
-        sub.walltime = args.walltime
-        sub.additional_options = args.submission_opts
-        sub.reservation_date = startdate
-        cmd += style.emph(frontend) + ': ' + get_oarsub_commandline(sub) + '\n'
-        job_specs = (sub, frontend)
-    cmd = cmd[0:-2]
-else:
-    cmd = get_oargridsub_commandline(jobs_specs, walltime=args.walltime,
-                                     additional_options=args.submission_opts,
-                                     reservation_date=startdate)
+        if walltime:
+            walltime = walltime
+        if program:
+            sub.command = program
+        if subnets and frontend in subnets:
+            sub.resources = subnets[frontend] + \
+                '+' + sub.resources
+        if submission_opts:
+            sub.additional_options = submission_opts
+
+    return jobs_specs
 
 
-logger.info('Reservation command: \n\033[1m%s\033[0m', cmd)
-if args.json:
-    data = {
-        'cmd': [cmd] if '\n' not in cmd else
-        [oarsub for oarsub in cmd.split('\n')],
-        'options': {
-            'mode': args.mode,
-            'resources_wanted': resources_wanted,
-            'ratio': args.ratio if args.ratio else 1,
-            'walltime': format_oar_duration(args.walltime),
-            'startdate': args.startdate,
-            'enddate': args.enddate,
-            'submission_options': args.submission_opts,
-            'job_name': args.job_name,
-            'subnet': subnets if args.subnet else False,
-            'kavlan': True if args.kavlan else False,
-            'virtual': True if args.virtual else False,
-            'green': True if args.green else False,
-            'infiniband': True if args.infiniband else False,
-            'charter': True if args.charter else False,
-            'oargrid': True if (len(jobs_specs) > 1 and not args.no_oargrid)
-            or args.force_oargrid else False},
-        'slots': slots}
+def get_reservation_cmd(jobs_specs, startdate, walltime, submission_opts,
+                        program, no_oargrid, force_oargrid):
+    """ """
+    if no_oargrid or (len(jobs_specs) == 1 and not force_oargrid):
+        cmd = ''
+        for sub, frontend in jobs_specs:
 
-    print json.dumps(data, sort_keys=True)
-else:
+            cmd += style.emph(frontend) + ': ' + \
+                get_oarsub_commandline(sub) + '\n'
+        cmd = cmd[0:-1]
+    else:
+        cmd = get_oargridsub_commandline(jobs_specs,
+                                         walltime=walltime,
+                                         additional_options=submission_opts,
+                                         reservation_date=startdate)
+
+    logger.info("Reservation command: \n%s ", cmd)
+
+    return cmd
+
+
+def make_reservation(args, jobs_specs, startdate):
+    """ """
     if args.yes:
         reservation = 'y'
     else:
         reservation = raw_input('Do you want to do the reservation (y/[N]): ')
 
-    oar_job_id, oargrid_job_id = None, None
     if reservation in ['y', 'Y', 'yes']:
         if args.no_oargrid or (len(jobs_specs) == 1
                                and not args.force_oargrid):
-            jobs = oarsubgrid(jobs_specs)
+            jobs = oarsub(jobs_specs)
             for job in jobs:
-                if job[0] is not None:
+                if job[0]:
                     logger.info('Reservation done on %s:%s',
                                 style.emph(job[1]), job[0])
                 else:
@@ -426,24 +432,61 @@ else:
                                  'reservation on site %s',
                                  style.emph(job[1]))
         else:
-            (oargrid_job_id, _) = oargridsub(jobs_specs,
-                                             walltime=args.walltime,
-                                             additional_options=args.submission_opts,
-                                             reservation_date=startdate)
-            if oargrid_job_id is not None:
+            (job_id, _) = oargridsub(jobs_specs,
+                                     walltime=args.walltime,
+                                     additional_options=args.submission_opts,
+                                     reservation_date=startdate)
+            if job_id:
                 logger.info('Grid reservation done, oargrid_job_id = %s',
-                            oargrid_job_id)
+                            job_id)
                 log = style.log_header('Jobs')
-                jobs = get_oargrid_job_oar_jobs(oargrid_job_id)
+                jobs = get_oargrid_job_oar_jobs(job_id)
                 for job_id, site in jobs:
                     log += '\n' + style.emph(site).ljust(25) + \
                         str(job_id).rjust(9)
                 log += '\n' + style.emph('Key file: ') + \
-                    get_oargrid_job_key(oargrid_job_id)
+                    get_oargrid_job_key(job_id)
                 logger.info(log)
-                exit(oargrid_job_id)
+                exit(job_id)
             else:
                 logger.error('Error in performing the reservation ')
                 exit(1)
     else:
         logger.info('Aborting reservation ...')
+
+
+def json_dumps(cmd, slots, resources_wanted, args):
+    """ """
+    sites = []
+    oargrid = (len([s for s in resources_wanted if s not in sites and
+             s in get_g5k_sites()]) > 1 and not args.no_oargrid) or \
+                    args.force_oargrid
+    ansi_escape = re.compile(r'\x1b[^m]*m')
+    ansi_escape.sub('', cmd)
+    data = {
+            'cmd': [ansi_escape.sub('', cmd)] if '\n' not in cmd else
+            [ansi_escape.sub('', oarsub) for oarsub in cmd.split('\n')],
+            'options': {
+                'mode': args.mode,
+                'resources_wanted': resources_wanted,
+                'ratio': args.ratio if args.ratio else 1,
+                'walltime': format_oar_duration(args.walltime),
+                'startdate': args.startdate,
+                'enddate': args.enddate,
+                'submission_options': args.submission_opts,
+                'job_name': args.job_name,
+                'subnet': args.subnet,
+                'kavlan': args.kavlan,
+                'virtual': args.virtual,
+                'green': args.green,
+                'infiniband': args.infiniband,
+                'charter': args.charter,
+                'oargrid': oargrid},
+            'slots': slots[0:10]}
+
+    f = open('funk.json', 'w')
+    f.write(json.dumps(data, sort_keys=True))
+    f.close()
+
+if __name__ == "__main__":
+    main()
