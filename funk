@@ -14,7 +14,8 @@ from time import time
 from datetime import timedelta
 from execo import logger
 from execo.log import style
-from execo_g5k import get_g5k_sites, get_g5k_clusters, get_host_attributes
+from execo_g5k import get_g5k_sites, get_g5k_clusters, get_host_attributes,
+    get_cluster_attributes
 from execo_g5k.planning import show_resources, get_slots, draw_slots, \
     find_first_slot, find_max_slot, find_free_slot, \
     get_jobs_specs, distribute_hosts
@@ -267,8 +268,10 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
                 element_uid, n_nodes = element, 0
         resources_wanted[element_uid] = int(n_nodes)
 
-    # Managing blacklist from options
-    blacklisted = []
+    # Managing blacklist from options 
+    # + REMOVE CLUSTER NOT IN PRODUCTION
+    blacklisted = [c for c in get_g5k_clusters()
+                   if not get_cluster_attributes(c)['production']]
     if blacklist:
         for element in blacklist.split(','):
             blacklisted.append(element)
