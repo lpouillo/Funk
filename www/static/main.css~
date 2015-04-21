@@ -1,0 +1,55 @@
+
+#main {
+  font-size: 14px;
+  width: 900px;
+  margin: auto;
+}
+#general, #time, #nodes, #elements, #network, #job_options {
+  display: table;
+}
+#general div, #time div, .site,  #network div, #job_options div {
+  display: table-cell;
+  white-space: nowrap  
+}
+#general div, #time div {
+  padding: 0px 5px;
+}
+
+.div_head {
+	width:80px;
+}
+
+.date_picker {
+  width:110px;
+  border-radius: 5px 5px 5px 5px;
+}
+.easyui-timespinner {
+  width:60px;
+}
+.ui-datepicker-buttonpane{
+ display: none; 
+}
+.ui-datepicker {
+  width: 300px;
+  padding: 8px 7px 8px;
+  height: 55px;
+  margin-top: 5px;
+}
+
+.site {
+  border: 1px solid black;
+}
+.site span {
+  font-weight:bold;
+  font-size: 14px;
+}
+#grid5000 input[type="text"], .site input[type="text"] {
+  width: 30px;
+  border-radius: 2px 2px 2px 2px;
+  -moz-box-sizing: border-box;
+  font-size: 12px;
+}
+.cluster span {
+  font-weight: normal; 
+  font-size: 12px;
+}

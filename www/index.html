@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <link href="main.css" rel="stylesheet" media="all" type="text/css">
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.11.1/themes/smoothness/jquery-ui.css">
+  <script type="text/javascript" src="main.js"></script>
+  <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+  <script src="//code.jquery.com/ui/1.11.1/jquery-ui.js"></script>
+  <script>
+    $(function() {
+      $( "#datepicker" ).datepicker();
+    });
+  </script> 
+</head>
+<body>
+	<div id="main">
+	<h1>Funk</h1>
+	<form>
+	<div id="general">
+      <div id="mode">
+	    <span title="How do you want your nodes ?">Mode</span>    
+	    <select onchange="SwitchResourcesInput(this)">
+" + 		  <option value="date">Date - give you the number of nodes available at a given date</option>
+		  <option value="free">Free - find the next free slot for a combination of resources</option>
+		  <option value="max">Max - find the time slot where the maximum number of nodes are available</option>
+		</select>
+	  </div>  
+	  <div id="autoresa">
+		<span title="Perform reservation at the end of the execution">Autoreservation</span> 
+		<input type="checkbox" name="auto"/>
+
+	  </div>
+	</div>
+	<div id="time">
+	  <div id="start_date">
+		<span title="type or pick start date and time">Start date</span> 
+		<input type="text" id="datepicker">
+	  </div>
+	  <div id="end_date">
+		<span title="type or pick end date and time">End date</span>
+		<input type="text" id="datepicker">
+      </div>
+      <div id="charter">
+		<span title="e.g run only night/week-end">Avoid charter periods </span> 
+		<input type="checkbox">
+      </div>
+	</div>
+    
+  <div id="grid5000"> 
+		<input type="checkbox" name="grid5000" onclick="SwitchSites(this)"/> Use any nodes on Grid'5000 
+		</div>
+		<div id="elements">
+		    <div id="grenoble" class="site">
+      <input type="checkbox" name="grenoble" onclick="SwitchSiteClusters(this)"/> <span>grenoble</span>
+      <div id="adonis" class="cluster">
+        <input type="checkbox" name="adonis"/> <span>adonis</span>
+      </div>
+      <div id="edel" class="cluster">
+        <input type="checkbox" name="edel"/> <span>edel</span>
+      </div>
+      <div id="genepi" class="cluster">
+        <input type="checkbox" name="genepi"/> <span>genepi</span>
+      </div>
+   </div>
+    <div id="lille" class="site">
+      <input type="checkbox" name="lille" onclick="SwitchSiteClusters(this)"/> <span>lille</span>
+      <div id="chimint" class="cluster">
+        <input type="checkbox" name="chimint"/> <span>chimint</span>
+      </div>
+      <div id="chinqchint" class="cluster">
+        <input type="checkbox" name="chinqchint"/> <span>chinqchint</span>
+      </div>
+      <div id="chirloute" class="cluster">
+        <input type="checkbox" name="chirloute"/> <span>chirloute</span>
+      </div>
+   </div>
+    <div id="luxembourg" class="site">
+      <input type="checkbox" name="luxembourg" onclick="SwitchSiteClusters(this)"/> <span>luxembourg</span>
+      <div id="granduc" class="cluster">
+        <input type="checkbox" name="granduc"/> <span>granduc</span>
+      </div>
+      <div id="petitprince" class="cluster">
+        <input type="checkbox" name="petitprince"/> <span>petitprince</span>
+      </div>
+   </div>
+    <div id="lyon" class="site">
+      <input type="checkbox" name="lyon" onclick="SwitchSiteClusters(this)"/> <span>lyon</span>
+      <div id="hercule" class="cluster">
+        <input type="checkbox" name="hercule"/> <span>hercule</span>
+      </div>
+      <div id="orion" class="cluster">
+        <input type="checkbox" name="orion"/> <span>orion</span>
+      </div>
+      <div id="sagittaire" class="cluster">
+        <input type="checkbox" name="sagittaire"/> <span>sagittaire</span>
+      </div>
+      <div id="taurus" class="cluster">
+        <input type="checkbox" name="taurus"/> <span>taurus</span>
+      </div>
+   </div>
+    <div id="nancy" class="site">
+      <input type="checkbox" name="nancy" onclick="SwitchSiteClusters(this)"/> <span>nancy</span>
+      <div id="graphene" class="cluster">
+        <input type="checkbox" name="graphene"/> <span>graphene</span>
+      </div>
+      <div id="graphite" class="cluster">
+        <input type="checkbox" name="graphite"/> <span>graphite</span>
+      </div>
+      <div id="griffon" class="cluster">
+        <input type="checkbox" name="griffon"/> <span>griffon</span>
+      </div>
+   </div>
+    <div id="nantes" class="site">
+      <input type="checkbox" name="nantes" onclick="SwitchSiteClusters(this)"/> <span>nantes</span>
+      <div id="econome" class="cluster">
+        <input type="checkbox" name="econome"/> <span>econome</span>
+      </div>
+   </div>
+    <div id="reims" class="site">
+      <input type="checkbox" name="reims" onclick="SwitchSiteClusters(this)"/> <span>reims</span>
+      <div id="stremi" class="cluster">
+        <input type="checkbox" name="stremi"/> <span>stremi</span>
+      </div>
+   </div>
+    <div id="rennes" class="site">
+      <input type="checkbox" name="rennes" onclick="SwitchSiteClusters(this)"/> <span>rennes</span>
+      <div id="paradent" class="cluster">
+        <input type="checkbox" name="paradent"/> <span>paradent</span>
+      </div>
+      <div id="paranoia" class="cluster">
+        <input type="checkbox" name="paranoia"/> <span>paranoia</span>
+      </div>
+      <div id="parapide" class="cluster">
+        <input type="checkbox" name="parapide"/> <span>parapide</span>
+      </div>
+      <div id="parapluie" class="cluster">
+        <input type="checkbox" name="parapluie"/> <span>parapluie</span>
+      </div>
+   </div>
+    <div id="sophia" class="site">
+      <input type="checkbox" name="sophia" onclick="SwitchSiteClusters(this)"/> <span>sophia</span>
+      <div id="sol" class="cluster">
+        <input type="checkbox" name="sol"/> <span>sol</span>
+      </div>
+      <div id="suno" class="cluster">
+        <input type="checkbox" name="suno"/> <span>suno</span>
+      </div>
+   </div>
+    <div id="toulouse" class="site">
+      <input type="checkbox" name="toulouse" onclick="SwitchSiteClusters(this)"/> <span>toulouse</span>
+      <div id="pastel" class="cluster">
+        <input type="checkbox" name="pastel"/> <span>pastel</span>
+      </div>
+   </div>
+  </div>
+    </form>
+    </div>
+</body>
+</html>
