@@ -48,6 +48,7 @@ def main(args=None):
                       kavlan=args.kavlan, subnet=False,
                       out_of_chart=args.charter, starttime=args.startdate,
                       endtime=args.enddate, blacklisted=blacklisted)
+
     if args.plots:
         try:
             draw_slots(slots, outfile="funk_slots.png")
@@ -63,7 +64,7 @@ def main(args=None):
     jobs_specs = create_jobs(args.job_name, args.walltime, startdate, enddate,
                              resources, resources_wanted, args.blacklist,
                              args.ratio, args.subnet, args.submission_opts,
-                             args.program)
+                             args.program, args.queue)
 
     cmd = get_reservation_cmd(jobs_specs, startdate, args.walltime,
                               args.submission_opts, args.program,
@@ -120,16 +121,13 @@ def set_options():
                           "\ndefault = %(default)s")
     optinout.add_argument("-y", "--yes",
                           action="store_true",
-                          default=False,
                           help="Perform the reservation automatically")
     optio = optinout.add_mutually_exclusive_group()
     optio.add_argument("-q", "--quiet",
                        action="store_true",
-                       default=False,
                        help="Run without printing anything")
     optio.add_argument("-v", "--verbose",
                        action="store_true",
-                       default=False,
                        help="Run in verbose mode")
     optinout.add_argument("-p", "--program",
                           help="The program to be run when the reservation start")
@@ -153,14 +151,12 @@ def set_options():
                                 help="Remove clusters from planning computation")
     optreservation.add_argument("-R", "--ratio",
                                 type=float,
-                                default=None,
                                 help="Apply a given ratio to the host resources")
     optreservation.add_argument("-o", "--submission_opts",
                                 default="",
                                 help="Extra options to pass to the oarsub/oargridsub command line")
     optreservation.add_argument("-k", "--kavlan",
                                 action="store_true",
-                                default=False,
                                 help="Ask for a KaVLAN")
     optreservation.add_argument("-n", "--subnet",
                                 help="Ask for subnets. slash_22=1 will retrieve a /22 subnet on every site of your requests, " +\
@@ -168,6 +164,10 @@ def set_options():
     optreservation.add_argument("-j", "--job_name",
                                 default="FUNK",
                                 help="The job name passed to the OAR subjobs" + \
+                                "\ndefault = %(default)s")
+    optreservation.add_argument("--queue",
+                                default="default",
+                                help="The OAR queue to use" + \
                                 "\ndefault = %(default)s")
     optreservation.add_argument('--virtual',
                                 action="store_true",
@@ -251,7 +251,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
         else:
             if ':' in element:
                 logger.warning('You give a resource element:n_nodes ' +
-                               'corresponding  to a ' + style.emph('free') +
+                               'corresponding to a ' + style.emph('free') +
                                ' mode ! ')
 
                 if not yes:
@@ -270,8 +270,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
 
     # Managing blacklist from options 
     # + REMOVE CLUSTER NOT IN PRODUCTION
-    blacklisted = [c for c in get_g5k_clusters()
-                   if not get_cluster_attributes(c)['production']]
+    blacklisted = []
     if blacklist:
         for element in blacklist.split(','):
             blacklisted.append(element)
@@ -329,7 +328,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
 
 
 def choose_slot(mode, slots, resources_wanted):
-    # Determine the slot to use
+    """Determine the slot to use"""
 
     if mode == 'date':
         # In date mode, take the first slot available for the wanted walltime
@@ -356,7 +355,8 @@ def choose_slot(mode, slots, resources_wanted):
 
 def create_jobs(job_name=None, walltime=None, startdate=None, enddate=None,
                 resources=None, resources_wanted=None, blacklisted=None,
-                ratio=None, subnet=None, submission_opts=None, program=None):
+                ratio=None, subnet=None, submission_opts=None, program=None,
+                queue=None):
     resources = distribute_hosts(resources, resources_wanted, blacklisted,
                              ratio)
     show_resources(resources, 'Resources selected')
@@ -390,6 +390,8 @@ def create_jobs(job_name=None, walltime=None, startdate=None, enddate=None,
                 '+' + sub.resources
         if submission_opts:
             sub.additional_options = submission_opts
+        if queue:
+            sub.queue = queue
 
     return jobs_specs
 
