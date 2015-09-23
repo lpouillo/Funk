@@ -14,8 +14,7 @@ from time import time
 from datetime import timedelta
 from execo import logger
 from execo.log import style
-from execo_g5k import get_g5k_sites, get_g5k_clusters, get_host_attributes, \
-    get_cluster_attributes
+from execo_g5k import get_g5k_sites, get_g5k_clusters, get_host_attributes
 from execo_g5k.planning import show_resources, get_slots, draw_slots, \
     find_first_slot, find_max_slot, find_free_slot, \
     get_jobs_specs, distribute_hosts
@@ -329,7 +328,8 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
 
 def choose_slot(mode, slots, resources_wanted):
     """Determine the slot to use"""
-
+    logger.debug(slots)
+    logger.debug(resources_wanted)
     if mode == 'date':
         # In date mode, take the first slot available for the wanted walltime
         start, end, resources = find_first_slot(slots, resources_wanted)
@@ -412,7 +412,7 @@ def get_reservation_cmd(jobs_specs, startdate, walltime, submission_opts,
                                          additional_options=submission_opts,
                                          reservation_date=startdate)
 
-    logger.info("Reservation command: \n%s ", cmd)
+    logger.info("Reservation command: \n%s ", style.command(cmd))
 
     return cmd
 
@@ -449,8 +449,9 @@ def make_reservation(args, jobs_specs, startdate):
                 for job_id, site in jobs:
                     log += '\n' + style.emph(site).ljust(25) + \
                         str(job_id).rjust(9)
-                log += '\n' + style.emph('Key file: ') + \
-                    get_oargrid_job_key(job_id)
+# Need to understant a bug in get_oargrid_job_key
+#                log += '\n' + style.emph('Key file: ') + \
+#                    get_oargrid_job_key(job_id)
                 logger.info(log)
                 exit(job_id)
             else:
