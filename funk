@@ -446,9 +446,9 @@ def make_reservation(args, jobs_specs, startdate):
                             job_id)
                 log = style.log_header('Jobs')
                 jobs = get_oargrid_job_oar_jobs(job_id)
-                for job_id, site in jobs:
+                for sjob_id, site in jobs:
                     log += '\n' + style.emph(site).ljust(25) + \
-                        str(job_id).rjust(9)
+                        str(sjob_id).rjust(9)
                 log += '\n' + style.emph('Key file: ') + \
                     get_oargrid_job_key(job_id)
                 logger.info(log)
