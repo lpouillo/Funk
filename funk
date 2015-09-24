@@ -24,7 +24,7 @@ from execo_g5k.oar import get_oarsub_commandline, oarsub, format_oar_date, \
     format_oar_duration
 from execo.time_utils import timedelta_to_seconds, format_date
 
-__version__ = '1.3-dev'
+__version__ = '1.4'
 
 
 def main(args=None):
@@ -40,7 +40,7 @@ def main(args=None):
                                                            args.green,
                                                            args.kavlan,
                                                            args.subnet,
-                                                           not args.json or \
+                                                           not args.json or
                                                            not args.yes)
 
     slots = get_slots(elements=resources_wanted.keys(), walltime=args.walltime,
@@ -52,14 +52,14 @@ def main(args=None):
         try:
             draw_slots(slots, outfile="funk_slots.png")
         except:
-            logger.warning('No matplotlib package detected, ' +
-                       'plots cannot be created')
+            logger.warning('Error in drawing slots')
             pass
 
     startdate, enddate, resources = choose_slot(mode, slots, resources_wanted)
     if startdate is None:
         logger.error('Sorry, unable to find the resources required.')
         exit()
+
     jobs_specs = create_jobs(args.job_name, args.walltime, startdate, enddate,
                              resources, resources_wanted, args.blacklist,
                              args.ratio, args.subnet, args.submission_opts,
@@ -449,9 +449,8 @@ def make_reservation(args, jobs_specs, startdate):
                 for job_id, site in jobs:
                     log += '\n' + style.emph(site).ljust(25) + \
                         str(job_id).rjust(9)
-# Need to understant a bug in get_oargrid_job_key
-#                log += '\n' + style.emph('Key file: ') + \
-#                    get_oargrid_job_key(job_id)
+                log += '\n' + style.emph('Key file: ') + \
+                    get_oargrid_job_key(job_id)
                 logger.info(log)
                 exit(job_id)
             else:
