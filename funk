@@ -382,7 +382,7 @@ def create_jobs(job_name=None, walltime=None, startdate=None, enddate=None,
 
     for sub, frontend in jobs_specs:
         if walltime:
-            walltime = walltime
+            sub.walltime = walltime
         if program:
             sub.command = program
         if subnets and frontend in subnets:
