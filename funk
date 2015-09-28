@@ -392,6 +392,8 @@ def create_jobs(job_name=None, walltime=None, startdate=None, enddate=None,
             sub.additional_options = submission_opts
         if queue:
             sub.queue = queue
+        if startdate:
+            sub.reservation_date = startdate
 
     return jobs_specs
 
