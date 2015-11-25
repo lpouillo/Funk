@@ -15,7 +15,7 @@ from datetime import timedelta
 from execo import logger
 from execo.log import style
 from execo_g5k import get_g5k_sites, get_g5k_clusters, get_host_attributes
-from execo_g5k.planning import show_resources, get_slots, draw_slots, \
+from execo_g5k.planning import show_resources, draw_slots, \
     find_first_slot, find_max_slot, find_free_slot, \
     get_jobs_specs, distribute_hosts, get_planning, compute_slots, max_resources
 from execo_g5k.oargrid import get_oargridsub_commandline, \
@@ -23,6 +23,7 @@ from execo_g5k.oargrid import get_oargridsub_commandline, \
 from execo_g5k.oar import get_oarsub_commandline, oarsub, format_oar_date, \
     format_oar_duration
 from execo.time_utils import timedelta_to_seconds, format_date
+from json import dumps
 
 __version__ = '1.5-dev'
 
@@ -76,8 +77,8 @@ def main(args=None):
                               args.submission_opts, args.program,
                               args.no_oargrid, args.force_oargrid,
                               args.queue)
-    if args.json:
-        json_dumps(cmd, slots, resources_wanted, args)
+    if args.json or args.json_file:
+        json_output(cmd, slots, resources_wanted, args)
     else:
         make_reservation(args, jobs_specs, startdate, args.queue)
 
@@ -143,6 +144,8 @@ def set_options():
                           help="Draw a Gantt plot and the slots")
     optinout.add_argument("--json",
                           action="store_true",
+                          help="Output the computed data to standard output")
+    optinout.add_argument("--json-file",
                           help="Output the computed data to a json file")
 
     optreservation = parser.add_argument_group(style.host("Reservation"),
@@ -227,7 +230,7 @@ def set_loglevel(verbose, quiet, json):
 
 
 def welcome(args):
-    logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K  ' +
+    logger.info('%s', style.log_header('-- Find yoUr Nodes on g5K ' +
                                        __version__ + ' --'))
     logger.detail('Options\n%s', '\n'.join([style.emph(option.ljust(20)) +
                                         '= ' + str(value).ljust(10)
@@ -474,7 +477,7 @@ def make_reservation(args, jobs_specs, startdate, queue="default"):
         logger.info('Aborting reservation ...')
 
 
-def json_dumps(cmd, slots, resources_wanted, args):
+def json_output(cmd, slots, resources_wanted, args):
     """ """
     sites = []
     oargrid = (len([s for s in resources_wanted if s not in sites and
@@ -503,9 +506,12 @@ def json_dumps(cmd, slots, resources_wanted, args):
                 'oargrid': oargrid},
             'slots': slots[0:10]}
 
-    f = open('funk.json', 'w')
-    f.write(json.dumps(data, sort_keys=True))
-    f.close()
+    if args.json_file:
+        f = open(args.json_file, 'w')
+        f.write(json.dumps(data, sort_keys=True))
+        f.close()
+    else:
+        print json.dumps(data)
 
 if __name__ == "__main__":
     main()
