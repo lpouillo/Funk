@@ -17,14 +17,14 @@ from execo.log import style
 from execo_g5k import get_g5k_sites, get_g5k_clusters, get_host_attributes
 from execo_g5k.planning import show_resources, get_slots, draw_slots, \
     find_first_slot, find_max_slot, find_free_slot, \
-    get_jobs_specs, distribute_hosts
+    get_jobs_specs, distribute_hosts, get_planning, compute_slots, max_resources
 from execo_g5k.oargrid import get_oargridsub_commandline, \
     get_oargrid_job_oar_jobs, get_oargrid_job_key, oargridsub
 from execo_g5k.oar import get_oarsub_commandline, oarsub, format_oar_date, \
     format_oar_duration
 from execo.time_utils import timedelta_to_seconds, format_date
 
-__version__ = '1.4'
+__version__ = '1.5-dev'
 
 
 def main(args=None):
@@ -42,12 +42,18 @@ def main(args=None):
                                                            args.subnet,
                                                            not args.json or
                                                            not args.yes)
+    logger.info('Compiling planning')
+    planning = get_planning(elements=resources_wanted,
+                            vlan=args.kavlan,
+                            subnet=args.subnet,
+                            storage=False,
+                            out_of_chart=args.charter,
+                            starttime=args.startdate,
+                            endtime=args.enddate)
+    logger.info('Calculating slots of %s ', args.walltime)
 
-    slots = get_slots(elements=resources_wanted.keys(), walltime=args.walltime,
-                      kavlan=args.kavlan, subnet=False,
-                      out_of_chart=args.charter, starttime=args.startdate,
-                      endtime=args.enddate, blacklisted=blacklisted)
-
+    slots = compute_slots(planning, args.walltime, excluded_elements=blacklisted)
+    max_r = max_resources(planning)
     if args.plots:
         try:
             draw_slots(slots, outfile="funk_slots.png")
@@ -55,7 +61,8 @@ def main(args=None):
             logger.warning('Error in drawing slots')
             pass
 
-    startdate, enddate, resources = choose_slot(mode, slots, resources_wanted)
+    startdate, enddate, resources = choose_slot(mode, slots, resources_wanted,
+                                                max_r)
     if startdate is None:
         logger.error('Sorry, unable to find the resources required.')
         exit()
@@ -63,15 +70,16 @@ def main(args=None):
     jobs_specs = create_jobs(args.job_name, args.walltime, startdate, enddate,
                              resources, resources_wanted, args.blacklist,
                              args.ratio, args.subnet, args.submission_opts,
-                             args.program, args.queue)
+                             args.program, args.queue, max_r)
 
     cmd = get_reservation_cmd(jobs_specs, startdate, args.walltime,
                               args.submission_opts, args.program,
-                              args.no_oargrid, args.force_oargrid)
+                              args.no_oargrid, args.force_oargrid,
+                              args.queue)
     if args.json:
         json_dumps(cmd, slots, resources_wanted, args)
     else:
-        make_reservation(args, jobs_specs, startdate)
+        make_reservation(args, jobs_specs, startdate, args.queue)
 
 
 def set_options():
@@ -122,7 +130,7 @@ def set_options():
                           action="store_true",
                           help="Perform the reservation automatically")
     optio = optinout.add_mutually_exclusive_group()
-    optio.add_argument("-q", "--quiet",
+    optio.add_argument("--quiet",
                        action="store_true",
                        help="Run without printing anything")
     optio.add_argument("-v", "--verbose",
@@ -164,7 +172,7 @@ def set_options():
                                 default="FUNK",
                                 help="The job name passed to the OAR subjobs" + \
                                 "\ndefault = %(default)s")
-    optreservation.add_argument("--queue",
+    optreservation.add_argument("-q", "--queue",
                                 default="default",
                                 help="The OAR queue to use" + \
                                 "\ndefault = %(default)s")
@@ -235,7 +243,7 @@ def welcome(args):
 
 
 def define_resources(mode, resources, blacklist, virtual, infiniband, green,
-                    kavlan, subnet, yes=False):
+                    kavlan, subnet, queue, yes=False):
     # Creating resources dict from command line options resources (-r)
     resources_wanted = {}
     for element in resources.split(','):
@@ -267,8 +275,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
                 element_uid, n_nodes = element, 0
         resources_wanted[element_uid] = int(n_nodes)
 
-    # Managing blacklist from options 
-    # + REMOVE CLUSTER NOT IN PRODUCTION
+    # Managing blacklist from options
     blacklisted = []
     if blacklist:
         for element in blacklist.split(','):
@@ -276,7 +283,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
     if virtual or green or infiniband:
         logger.info('Retrieving cluster attributes to perform feature-based blacklist')
         feature_blacklist = []
-        for cluster in get_g5k_clusters():
+        for cluster in get_g5k_clusters(queue):
             cluster_attr = get_host_attributes(cluster + '-1')
             if virtual and not cluster_attr['supported_job_types']['virtual']:
                 feature_blacklist.append(cluster)
@@ -318,7 +325,6 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
         logger.warning('subnet is not implemented in execo_g5k.planning, ' +
                        'we cannot assure that the requested subnets will ' +
                        'be available')
-
     show_resources({resource: n_nodes
                     for resource, n_nodes in resources_wanted.iteritems()},
                    'Wanted resources')
@@ -326,7 +332,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
     return mode, resources_wanted, blacklisted
 
 
-def choose_slot(mode, slots, resources_wanted):
+def choose_slot(mode, slots, resources_wanted, max_resources):
     """Determine the slot to use"""
     logger.debug(slots)
     logger.debug(resources_wanted)
@@ -348,7 +354,7 @@ def choose_slot(mode, slots, resources_wanted):
     else:
         logger.info('A slot has been found at %s',
                     style.emph(format_date(start)))
-    show_resources(resources, 'Resources available')
+    show_resources(resources, 'Resources available', max_resources)
 
     return start, end, resources
 
@@ -356,10 +362,10 @@ def choose_slot(mode, slots, resources_wanted):
 def create_jobs(job_name=None, walltime=None, startdate=None, enddate=None,
                 resources=None, resources_wanted=None, blacklisted=None,
                 ratio=None, subnet=None, submission_opts=None, program=None,
-                queue=None):
+                queue=None, max_resources=None):
     resources = distribute_hosts(resources, resources_wanted, blacklisted,
                              ratio)
-    show_resources(resources, 'Resources selected')
+    show_resources(resources, 'Resources selected', max_resources)
 
     logger.info(style.log_header('Chosen slot ') + format_date(startdate) +
             ' -> ' + format_date(enddate))
@@ -399,7 +405,7 @@ def create_jobs(job_name=None, walltime=None, startdate=None, enddate=None,
 
 
 def get_reservation_cmd(jobs_specs, startdate, walltime, submission_opts,
-                        program, no_oargrid, force_oargrid):
+                        program, no_oargrid, force_oargrid, queue="default"):
     """ """
     if no_oargrid or (len(jobs_specs) == 1 and not force_oargrid):
         cmd = ''
@@ -414,14 +420,15 @@ def get_reservation_cmd(jobs_specs, startdate, walltime, submission_opts,
         cmd = get_oargridsub_commandline(jobs_specs,
                                          walltime=walltime,
                                          additional_options=submission_opts,
-                                         reservation_date=startdate)
+                                         reservation_date=startdate,
+                                         queue=queue)
 
     logger.info("Reservation command: \n%s ", style.command(cmd))
 
     return cmd
 
 
-def make_reservation(args, jobs_specs, startdate):
+def make_reservation(args, jobs_specs, startdate, queue="default"):
     """ """
     if args.yes:
         reservation = 'y'
@@ -446,7 +453,8 @@ def make_reservation(args, jobs_specs, startdate):
             (job_id, _) = oargridsub(jobs_specs,
                                      walltime=args.walltime,
                                      additional_options=args.submission_opts,
-                                     reservation_date=startdate)
+                                     reservation_date=startdate,
+                                     queue=queue)
             if job_id:
                 logger.info('Grid reservation done, oargrid_job_id = %s',
                             job_id)
