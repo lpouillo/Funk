@@ -40,6 +40,7 @@ def main(args=None):
                                                            args.green,
                                                            args.kavlan,
                                                            args.subnet,
+                                                           args.queue,
                                                            not args.json or
                                                            not args.yes)
     logger.info('Compiling planning')
