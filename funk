@@ -69,7 +69,7 @@ def main(args=None):
                                                 max_r)
     if startdate is None:
         logger.error('Sorry, unable to find the resources required.')
-        exit()
+        exit(1)
 
     jobs_specs = create_jobs(args.job_name, args.walltime, startdate, enddate,
                              resources, resources_wanted, args.blacklist,
@@ -257,7 +257,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
             if ':' not in element:
                 logger.error('You must specify the number of host ' +
                              'element:n_nodes when using free mode')
-                exit()
+                exit(1)
             else:
                 element_uid, n_nodes = element.split(':')
 
@@ -472,7 +472,7 @@ def make_reservation(args, jobs_specs, startdate, queue="default"):
                 log += '\n' + style.emph('Key file: ') + \
                     get_oargrid_job_key(job_id)
                 logger.info(log)
-                exit(job_id)
+                exit(0)
             else:
                 logger.error('Error in performing the reservation ')
                 exit(1)
