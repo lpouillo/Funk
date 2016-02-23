@@ -50,7 +50,8 @@ def main(args=None):
                             storage=False,
                             out_of_chart=args.charter,
                             starttime=args.startdate,
-                            endtime=args.enddate)
+                            endtime=args.enddate,
+                            queues=args.queue)
     if not planning:
         logger.error('unable to compute planning')
         exit(1)
