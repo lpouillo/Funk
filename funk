@@ -51,6 +51,9 @@ def main(args=None):
                             out_of_chart=args.charter,
                             starttime=args.startdate,
                             endtime=args.enddate)
+    if not planning:
+        logger.error('unable to compute planning')
+        exit(1)
     logger.info('Calculating slots of %s ', args.walltime)
 
     slots = compute_slots(planning, args.walltime, excluded_elements=blacklisted)
