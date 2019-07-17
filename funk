@@ -22,7 +22,7 @@ from execo_g5k.oargrid import get_oargridsub_commandline, \
     get_oargrid_job_oar_jobs, get_oargrid_job_key, oargridsub
 from execo_g5k.oar import get_oarsub_commandline, oarsub, format_oar_date, \
     format_oar_duration
-from execo.time_utils import timedelta_to_seconds, format_date
+from execo.time_utils import timedelta_to_seconds, format_date, get_unixts
 
 __version__ = '1.5'
 
@@ -207,18 +207,23 @@ def set_options():
                          help="Reservation walltime in OAR format" +
                          "\ndefault = %(default)s")
     opttime.add_argument("-s", "--startdate",
-                         default=int(time() + timedelta_to_seconds(timedelta(minutes=1))),
+                         default=None,
                          help="Starting date in OAR format" +
-                         "\ndefault = %(default)s")
+                         "\ndefault = now")
     opttime.add_argument("-e", "--enddate",
-                         default=int(time() + timedelta_to_seconds(timedelta(weeks=3, minutes=1))),
+                         default=None,
                          help="End date in OAR format" +
-                         "\ndefault = %(default)s")
+                         "\ndefault = three weeks after the startdate")
     opttime.add_argument("-c", "--charter",
                          default=False,
                          action="store_true",
                          help="Avoid charter periods")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.startdate == None:
+        args.startdate = int(time() + timedelta_to_seconds(timedelta(minutes=1)))
+    if args.enddate == None:
+        args.enddate = int(get_unixts(args.startdate) + timedelta_to_seconds(timedelta(weeks=3)))
+    return args
 
 
 def set_loglevel(verbose, quiet, json):
