@@ -24,7 +24,7 @@ from execo_g5k.oar import get_oarsub_commandline, oarsub, format_oar_date, \
     format_oar_duration
 from execo.time_utils import timedelta_to_seconds, format_date, get_unixts
 
-__version__ = '1.5'
+__version__ = '1.6'
 
 
 def main(args=None):
