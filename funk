@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 #    Funk: (F)ind (U)r (N)odes on G5(K)
@@ -7,6 +7,7 @@
 #    Developped by the Hemera initiative, 2013-2014
 #    https://www.grid5000.fr/mediawiki/index.php/Funk
 #
+from __future__ import print_function
 import re
 import json
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -243,7 +244,7 @@ def welcome(args):
                                        __version__ + ' --'))
     logger.detail('Options\n%s', '\n'.join([style.emph(option.ljust(20)) +
                                         '= ' + str(value).ljust(10)
-                                        for option, value in vars(args).iteritems()
+                                        for option, value in vars(args).items()
                                         if value is not None]))
 
     logger.info('Mode: %s', style.emph(args.mode))
@@ -274,7 +275,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
                                ' mode ! ')
 
                 if not yes:
-                    switch_mode = raw_input('Do you want to switch to free mode ([Y]/n): ')
+                    switch_mode = input('Do you want to switch to free mode ([Y]/n): ')
                 else:
                     switch_mode = 'y'
                 if switch_mode == 'n':
@@ -315,7 +316,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
         sites = get_g5k_sites()
     else:
         sites = []
-        for element in resources_wanted.iterkeys():
+        for element in resources_wanted:
             if element in get_g5k_sites() and element not in sites:
                 sites.append(element)
 
@@ -338,7 +339,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
                        'we cannot assure that the requested subnets will ' +
                        'be available')
     show_resources({resource: n_nodes
-                    for resource, n_nodes in resources_wanted.iteritems()},
+                    for resource, n_nodes in resources_wanted.items()},
                    'Wanted resources')
 
     return mode, resources_wanted, blacklisted
@@ -445,7 +446,7 @@ def make_reservation(args, jobs_specs, startdate, queue="default"):
     if args.yes:
         reservation = 'y'
     else:
-        reservation = raw_input('Do you want to do the reservation (y/[N]): ')
+        reservation = input('Do you want to do the reservation (y/[N]): ')
 
     if reservation in ['y', 'Y', 'yes']:
         if args.no_oargrid or (len(jobs_specs) == 1
@@ -520,7 +521,7 @@ def json_output(cmd, slots, resources_wanted, args):
         f.write(json.dumps(data, sort_keys=True))
         f.close()
     else:
-        print json.dumps(data, sort_keys=True)
+        print(json.dumps(data, sort_keys=True))
 
 if __name__ == "__main__":
     main()
