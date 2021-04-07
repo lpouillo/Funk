@@ -8,7 +8,7 @@
 #    https://www.grid5000.fr/mediawiki/index.php/Funk
 #
 from __future__ import print_function
-import re
+import re, sys
 import json
 from argparse import ArgumentParser, RawTextHelpFormatter
 from time import time
@@ -24,6 +24,11 @@ from execo_g5k.oargrid import get_oargridsub_commandline, \
 from execo_g5k.oar import get_oarsub_commandline, oarsub, format_oar_date, \
     format_oar_duration
 from execo.time_utils import timedelta_to_seconds, format_date, get_unixts
+
+if sys.version_info >= (3,):
+    _input = input
+else:
+    _input = raw_input
 
 __version__ = '1.6'
 
@@ -275,7 +280,7 @@ def define_resources(mode, resources, blacklist, virtual, infiniband, green,
                                ' mode ! ')
 
                 if not yes:
-                    switch_mode = input('Do you want to switch to free mode ([Y]/n): ')
+                    switch_mode = _input('Do you want to switch to free mode ([Y]/n): ')
                 else:
                     switch_mode = 'y'
                 if switch_mode == 'n':
@@ -446,7 +451,7 @@ def make_reservation(args, jobs_specs, startdate, queue="default"):
     if args.yes:
         reservation = 'y'
     else:
-        reservation = input('Do you want to do the reservation (y/[N]): ')
+        reservation = _input('Do you want to do the reservation (y/[N]): ')
 
     if reservation in ['y', 'Y', 'yes']:
         if args.no_oargrid or (len(jobs_specs) == 1
