@@ -1,9 +1,12 @@
 Funk
 ====
 A Python tool to help you to find ressources on the Grid5000 platform.
-Requires execo 2.4
+Requires execo 2.6.7
 
 Developped by the Inria Hemera initiative 2010-2014
+
+   pip install execo==2.6.7
+
 
 https://www.grid5000.fr/mediawiki/index.php/Hemera
 
